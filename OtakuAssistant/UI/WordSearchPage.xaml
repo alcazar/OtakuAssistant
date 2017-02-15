@@ -1,0 +1,52 @@
+﻿<Page x:Name="Page"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:OtakuAssistant"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:OtakuLib="using:OtakuLib"
+    x:Class="OtakuAssistant.WordSearchPage"
+    mc:Ignorable="d"
+    d:DataContext="{Binding Source={StaticResource SampleWord}}"
+    MaxWidth="500">
+    <Page.Resources>
+        <DataTemplate x:Key="WordsItemTemplate">
+            <RelativePanel x:Name="WordItem" Height="48">
+                <TextBlock x:Name="Hanzi" Margin="10,0" Text="{Binding Hanzi, Converter={StaticResource SearchViewNameWrapper}}" HorizontalAlignment="Center" FontSize="{Binding Hanzi, Converter={StaticResource SearchViewNameSize}}" Width="100" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignBottomWithPanel="True" TextAlignment="Center" VerticalAlignment="Center" MaxLines="2"/>
+                <TextBlock x:Name="traditional" Text="{Binding Traditional}" FontSize="16" VerticalAlignment="Bottom" RelativePanel.Above="translations" Margin="0,0,5,0" RelativePanel.AlignRightWithPanel="True">
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color="{ThemeResource SystemChromeHighColor}"/>
+                    </TextBlock.Foreground>
+                </TextBlock>
+                <TextBlock x:Name="pinyins" Text="{Binding ThumbPinyin}" FontSize="14" VerticalAlignment="Bottom" RelativePanel.RightOf="Hanzi" RelativePanel.Above="translations" RelativePanel.LeftOf="traditional">
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color="{ThemeResource SystemChromeHighColor}"/>
+                    </TextBlock.Foreground>
+                </TextBlock>
+                <TextBlock x:Name="translations" Text="{Binding ThumbTranslation}" FontSize="20" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" IsColorFontEnabled="False" RelativePanel.AlignBottomWithPanel="True" RelativePanel.RightOf="Hanzi" RelativePanel.AlignRightWithPanel="True"/>
+            </RelativePanel>
+        </DataTemplate>
+    </Page.Resources>
+    <Page.BottomAppBar>
+        <CommandBar>
+            <CommandBar.Content>
+                <Grid/>
+            </CommandBar.Content>
+            <AppBarButton x:Name="BackButton" Icon="Back" Label="Back" Click="BackButton_Click" IsEnabled="{Binding Frame.CanGoBack, ElementName=Page, Mode=OneWay}"/>
+            <AppBarButton x:Name="ForwardButton" Icon="Forward" Label="Forward" Click="ForwardButton_Click" IsEnabled="{Binding Frame.CanGoForward, ElementName=Page, Mode=OneWay}"/>
+        </CommandBar>
+    </Page.BottomAppBar>
+
+    <RelativePanel>
+        <TextBox x:Name="SearchBox" Height="4" Style="{StaticResource AutoSuggestBoxTextBoxStyle}" TextWrapping="Wrap" Text="" PlaceholderText="Search" d:LayoutOverrides="TopPosition, BottomPosition" TextChanged="searchBox_TextChanged" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignTopWithPanel="True" Margin="40"/>
+        <ListView x:Name="WordListView" RelativePanel.Below="SearchBox" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignBottomWithPanel="True" VerticalAlignment="Top" ItemClick="wordListView_ItemClick" IsItemClickEnabled="True" ItemsSource="{Binding Words}" ItemTemplate="{StaticResource WordsItemTemplate}">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                </Style>
+            </ListView.ItemContainerStyle>
+        </ListView>
+    </RelativePanel>
+</Page>

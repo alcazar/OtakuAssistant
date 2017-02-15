@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="WordList"
+    targetNamespace="http://tempuri.org/WordList.xsd"
+    elementFormDefault="qualified"
+    xmlns="http://tempuri.org/WordList.xsd"
+    xmlns:mstns="http://tempuri.org/WordList.xsd"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+>
+    <xs:complexType name="Meaning">
+        <xs:sequence>
+            <xs:element name="Pinyin" type="xs:string" maxOccurs="unbounded"></xs:element>
+            <xs:element name="Translation" type="xs:string" maxOccurs="unbounded"></xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="Word">
+        <xs:sequence>
+            <xs:element name="Name" type="xs:string"></xs:element>
+            <xs:element name="Traditional" type="xs:string" minOccurs="0"></xs:element>
+            <xs:element name="Radicals" type="xs:string" minOccurs="0"></xs:element>
+            <xs:element name="Link" type="xs:anyURI" minOccurs="0"></xs:element>
+            <xs:element name="ThumbPinyin" type="xs:string" minOccurs="0"></xs:element>
+            <xs:element name="ThumbTranslation" type="xs:string" minOccurs="0"></xs:element>
+            <xs:element name="Meaning" type="Meaning" maxOccurs="unbounded"></xs:element>
+            <xs:element name="Tag" type="xs:string" minOccurs="0" maxOccurs="unbounded"></xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="WordList">
+        <xs:choice>
+            <xs:element name="Word" type="Word" maxOccurs="unbounded"></xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:element name="WordList" type="WordList"></xs:element>
+</xs:schema>
