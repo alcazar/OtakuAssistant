@@ -28,6 +28,7 @@ namespace OtakuAssistant
     public sealed partial class WordSearchPage : Page
     {
         private WordSearch CurrentSearch = null;
+        private SearchResult LastResults = null;
 
         public WordSearchPage()
         {
@@ -48,13 +49,22 @@ namespace OtakuAssistant
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
-            if (e.NavigationMode != NavigationMode.Back)
+            if (e.NavigationMode != NavigationMode.Refresh)
             {
-                if (e.NavigationMode != NavigationMode.Refresh)
+                StopSearch();
+                if (e.NavigationMode != NavigationMode.Back)
                 {
                     (Window.Current.Content as Frame).BackStack.RemoveAt((Window.Current.Content as Frame).BackStack.Count - 1);
                     (Window.Current.Content as Frame).BackStack.Add(new PageStackEntry(GetType(), SearchBox.Text, null));
                 }
+            }
+        }
+
+        private void StopSearch()
+        {
+            if (CurrentSearch != null)
+            {
+                CurrentSearch.SearchTaskCanceller.Cancel();
             }
         }
 
@@ -64,10 +74,7 @@ namespace OtakuAssistant
 
             if (searchText != string.Empty)
             {
-                if (CurrentSearch != null)
-                {
-                    CurrentSearch.SearchTaskCanceller.Cancel();
-                }
+                StopSearch();
 
                 CurrentSearch = new WordSearch(searchText);
                 CurrentSearch.SearchTask.ContinueWith(UpdateSearchResults);
@@ -76,12 +83,17 @@ namespace OtakuAssistant
 
         private void UpdateSearchResults(Task<SearchResult> task)
         {
+            // backup the search results in case we throw a new search before UI update
+            LastResults = task.Result;
+            // we can safely mark there is no more search ongoing
+            CurrentSearch = null;
+
             IAsyncAction action = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, UpdateSearchResultsUI);
         }
 
         private void UpdateSearchResultsUI()
         {
-            WordListView.ItemsSource = CurrentSearch.SearchTask.Result;
+            WordListView.ItemsSource = LastResults;
         }
         
         private void searchBox_TextChanged(object sender, TextChangedEventArgs e)
