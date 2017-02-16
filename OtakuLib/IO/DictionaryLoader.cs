@@ -83,9 +83,24 @@ namespace OtakuLib
                 BuildThumbs = buildThumbs;
             }
 
+            private bool disposed;
+
             public void Dispose()
             {
-                LoadStream.Dispose();
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            protected virtual void Dispose(bool disposing)
+            {
+                if (!disposed)
+                {
+                    if (disposing)
+                    {
+                        LoadStream.Dispose();
+                    }
+                    disposed = true;
+                }
             }
 
             public abstract List<Word> LoadDictionaryPart();
