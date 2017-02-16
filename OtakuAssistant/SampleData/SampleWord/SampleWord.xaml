@@ -13,8 +13,8 @@
             <SampleData:PinyinsItem Value="Aliquam sed" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Aenean aliquam" />
-            <SampleData:TranslationsItem Value="Maecenas mauris nam integer" />
+            <SampleData:TranslationsItem Value="Class curae nam aliquam maecenas cras sed" />
+            <SampleData:TranslationsItem Value="Dis praesent integer duis" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -23,8 +23,8 @@
             <SampleData:PinyinsItem Value="Vivamus aenean donec accumsan" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Praesent cras duis accumsan" />
-            <SampleData:TranslationsItem Value="Bibendum quisque" />
+            <SampleData:TranslationsItem Value="Accumsan nunc aenean est" />
+            <SampleData:TranslationsItem Value="Bibendum amet hac leo mus nec" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -33,8 +33,8 @@
             <SampleData:PinyinsItem Value="Fusce mauris" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Dictumst sed nunc dis" />
-            <SampleData:TranslationsItem Value="Est hac" />
+            <SampleData:TranslationsItem Value="Non ante quisque donec" />
+            <SampleData:TranslationsItem Value="Etiam dictumst eleifend vivamus per" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -43,8 +43,8 @@
             <SampleData:PinyinsItem Value="Blandit nunc commodo hac" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Vivamus class" />
-            <SampleData:TranslationsItem Value="Curae aliquam" />
+            <SampleData:TranslationsItem Value="Fusce lorem aliquam arcu morbi facilisi nulla" />
+            <SampleData:TranslationsItem Value="Mauris aliquet faucibus habitant inceptos proin" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -53,8 +53,8 @@
             <SampleData:PinyinsItem Value="Dictumst lorem dapibus morbi" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Leo aliquet eleifend" />
-            <SampleData:TranslationsItem Value="Donec nullam facilisi" />
+            <SampleData:TranslationsItem Value="Augue nullam blandit aptent" />
+            <SampleData:TranslationsItem Value="Dolor sed auctor diam congue eget sem" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
       </SampleData:WordsItem.Meanings>
@@ -67,8 +67,8 @@
             <SampleData:PinyinsItem Value="Egestas nulla mus" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Aptent etiam auctor congue" />
-            <SampleData:TranslationsItem Value="Blandit amet commodo" />
+            <SampleData:TranslationsItem Value="Elit fames sit felis enim" />
+            <SampleData:TranslationsItem Value="Cursus ipsum erat justo interdum" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -77,8 +77,8 @@
             <SampleData:PinyinsItem Value="Non faucibus aptent arcu" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Conubia ante" />
-            <SampleData:TranslationsItem Value="Arcu faucibus" />
+            <SampleData:TranslationsItem Value="Eros commodo vel lobortis nibh nam" />
+            <SampleData:TranslationsItem Value="Lacus conubia nisi sed nisl" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -87,8 +87,8 @@
             <SampleData:PinyinsItem Value="Gravida iaculis" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Mus habitant diam cubilia" />
-            <SampleData:TranslationsItem Value="Cursus fusce eget nec" />
+            <SampleData:TranslationsItem Value="Dis dictum nascetur est cubilia" />
+            <SampleData:TranslationsItem Value="Pharetra lorem placerat hac pulvinar" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -97,8 +97,8 @@
             <SampleData:PinyinsItem Value="Inceptos interdum congue" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Lorem elit" />
-            <SampleData:TranslationsItem Value="Inceptos dictum morbi" />
+            <SampleData:TranslationsItem Value="Sagittis leo dapibus senectus mus egestas" />
+            <SampleData:TranslationsItem Value="Nec nunc odio lectus" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -107,8 +107,8 @@
             <SampleData:PinyinsItem Value="Lobortis nascetur augue laoreet" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Dapibus lectus" />
-            <SampleData:TranslationsItem Value="Non egestas libero" />
+            <SampleData:TranslationsItem Value="Euismod magna libero non sociosqu ligula litora orci" />
+            <SampleData:TranslationsItem Value="Suscipit pede massa quam quis feugiat" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
       </SampleData:WordsItem.Meanings>
@@ -121,8 +121,8 @@
             <SampleData:PinyinsItem Value="Fames felis" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Enim euismod feugiat" />
-            <SampleData:TranslationsItem Value="Per interdum gravida" />
+            <SampleData:TranslationsItem Value="Urna torquent cras duis luctus" />
+            <SampleData:TranslationsItem Value="Gravida ultrices nunc metus" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -131,8 +131,8 @@
             <SampleData:PinyinsItem Value="Lectus pharetra justo lacus" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Iaculis nulla proin sed" />
-            <SampleData:TranslationsItem Value="Ligula erat augue" />
+            <SampleData:TranslationsItem Value="Vehicula morbi magnis neque" />
+            <SampleData:TranslationsItem Value="Volutpat per netus amet mattis maecenas nulla" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -141,8 +141,8 @@
             <SampleData:PinyinsItem Value="Lorem eget placerat magna" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Lacinia lobortis eros litora" />
-            <SampleData:TranslationsItem Value="Luctus sem nascetur" />
+            <SampleData:TranslationsItem Value="Mauris mollis praesent accumsan ante arcu diam sed" />
+            <SampleData:TranslationsItem Value="Sem bibendum montes nostra dictumst eleifend" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -151,8 +151,8 @@
             <SampleData:PinyinsItem Value="Erat libero pulvinar ligula" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Magnis dolor mattis nibh" />
-            <SampleData:TranslationsItem Value="Nisi mauris laoreet pharetra" />
+            <SampleData:TranslationsItem Value="Iaculis eget ornare facilisi" />
+            <SampleData:TranslationsItem Value="Lacinia platea primis porta sit laoreet rutrum" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -161,8 +161,8 @@
             <SampleData:PinyinsItem Value="Massa sagittis" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Sit natoque nisl" />
-            <SampleData:TranslationsItem Value="Nunc vel odio nam" />
+            <SampleData:TranslationsItem Value="Elit vel natoque enim" />
+            <SampleData:TranslationsItem Value="Purus faucibus habitant risus posuere erat sapien inceptos" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
       </SampleData:WordsItem.Meanings>
@@ -175,8 +175,8 @@
             <SampleData:PinyinsItem Value="Sociosqu nisl dis" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Fames orci sed" />
-            <SampleData:TranslationsItem Value="Placerat mollis dis pede" />
+            <SampleData:TranslationsItem Value="Velit interdum eros vitae lobortis nibh class" />
+            <SampleData:TranslationsItem Value="Curae potenti pretium donec nam nascetur" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -185,8 +185,8 @@
             <SampleData:PinyinsItem Value="Litora leo mus" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Est quam felis quis" />
-            <SampleData:TranslationsItem Value="Posuere hac potenti urna" />
+            <SampleData:TranslationsItem Value="Pharetra etiam rhoncus fusce" />
+            <SampleData:TranslationsItem Value="Placerat sed semper nisi" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -195,8 +195,8 @@
             <SampleData:PinyinsItem Value="Potenti suscipit odio pretium" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Leo pulvinar mus pretium" />
-            <SampleData:TranslationsItem Value="Sagittis rhoncus nec" />
+            <SampleData:TranslationsItem Value="Nisl pulvinar dis sociis sagittis" />
+            <SampleData:TranslationsItem Value="Taciti senectus tellus nunc est tempor" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -205,8 +205,8 @@
             <SampleData:PinyinsItem Value="Nec netus mattis sodales" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Montes senectus" />
-            <SampleData:TranslationsItem Value="Cras non" />
+            <SampleData:TranslationsItem Value="Odio orci pede sociosqu lorem hac sodales quam" />
+            <SampleData:TranslationsItem Value="Tempus quis viverra tortor" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -215,8 +215,8 @@
             <SampleData:PinyinsItem Value="Porta quam" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Sodales duis nostra viverra" />
-            <SampleData:TranslationsItem Value="Ipsum per nunc aliquam" />
+            <SampleData:TranslationsItem Value="Aliquam turpis urna varius aenean leo" />
+            <SampleData:TranslationsItem Value="Suscipit torquent mus nec mauris non per cras" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
       </SampleData:WordsItem.Meanings>
@@ -229,8 +229,8 @@
             <SampleData:PinyinsItem Value="Per mollis" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Justo sed lacus" />
-            <SampleData:TranslationsItem Value="Ornare lorem" />
+            <SampleData:TranslationsItem Value="Ultrices vehicula nullam aptent integer auctor congue" />
+            <SampleData:TranslationsItem Value="Quisque volutpat cursus dictum morbi" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -239,8 +239,8 @@
             <SampleData:PinyinsItem Value="Quis urna" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Sociosqu magna" />
-            <SampleData:TranslationsItem Value="Amet ante integer suscipit" />
+            <SampleData:TranslationsItem Value="Duis nulla sed maecenas" />
+            <SampleData:TranslationsItem Value="Praesent accumsan proin augue" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -249,8 +249,8 @@
             <SampleData:PinyinsItem Value="Risus maecenas cras aliquam" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Quisque vivamus" />
-            <SampleData:TranslationsItem Value="Arcu torquent aliquam" />
+            <SampleData:TranslationsItem Value="Dolor sem lectus bibendum" />
+            <SampleData:TranslationsItem Value="Fames felis ipsum nunc libero amet ligula" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -259,8 +259,8 @@
             <SampleData:PinyinsItem Value="Nostra integer" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Diam sem massa eget" />
-            <SampleData:TranslationsItem Value="Elit metus" />
+            <SampleData:TranslationsItem Value="Sit dictumst ante arcu vivamus litora vel" />
+            <SampleData:TranslationsItem Value="Luctus diam nam eleifend" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -269,13 +269,13 @@
             <SampleData:PinyinsItem Value="Accumsan amet platea" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Platea enim" />
-            <SampleData:TranslationsItem Value="Primis rutrum" />
+            <SampleData:TranslationsItem Value="Magnis aliquam facilisi sed faucibus" />
+            <SampleData:TranslationsItem Value="Mattis habitant eget dis aliquet blandit mauris" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
       </SampleData:WordsItem.Meanings>
     </SampleData:WordsItem>
-    <SampleData:WordsItem Hanzi="一二三四五六" Traditional="一二三" ThumbTranslation="Mauris aliquam" ThumbPinyin="yiersansiwuliu">
+    <SampleData:WordsItem Hanzi="一二三四五六一二三四五六一二三四三四" Traditional="一二三" ThumbTranslation="Mauris aliquam" ThumbPinyin="yiersansiwuliu">
       <SampleData:WordsItem.Meanings>
         <SampleData:MeaningsItem>
           <SampleData:MeaningsItem.Pinyins>
@@ -283,8 +283,8 @@
             <SampleData:PinyinsItem Value="Vel dictumst vitae arcu" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Erat ultrices sapien" />
-            <SampleData:TranslationsItem Value="Semper sit vel sociis" />
+            <SampleData:TranslationsItem Value="Inceptos interdum justo mollis est" />
+            <SampleData:TranslationsItem Value="Elit enim erat eros commodo lobortis montes" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -293,8 +293,8 @@
             <SampleData:PinyinsItem Value="Dis vivamus aliquam eget" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Eros nibh nisi taciti" />
-            <SampleData:TranslationsItem Value="Morbi tellus vehicula tempor" />
+            <SampleData:TranslationsItem Value="Nostra hac nibh nisi" />
+            <SampleData:TranslationsItem Value="Lacus nascetur lorem leo" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -303,8 +303,8 @@
             <SampleData:PinyinsItem Value="Facilisi aliquet rutrum faucibus" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Tempus aliquet blandit volutpat" />
-            <SampleData:TranslationsItem Value="Tortor nisl turpis" />
+            <SampleData:TranslationsItem Value="Nisl magna massa pharetra mus nunc ornare" />
+            <SampleData:TranslationsItem Value="Conubia metus odio nec placerat morbi" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -313,8 +313,8 @@
             <SampleData:PinyinsItem Value="Sapien etiam habitant" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Nunc commodo" />
-            <SampleData:TranslationsItem Value="Neque odio conubia" />
+            <SampleData:TranslationsItem Value="Orci neque pede netus" />
+            <SampleData:TranslationsItem Value="Pulvinar sagittis quam non cubilia platea" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
         <SampleData:MeaningsItem>
@@ -323,8 +323,8 @@
             <SampleData:PinyinsItem Value="Inceptos fusce" />
           </SampleData:MeaningsItem.Pinyins>
           <SampleData:MeaningsItem.Translations>
-            <SampleData:TranslationsItem Value="Maecenas varius" />
-            <SampleData:TranslationsItem Value="Nam netus orci" />
+            <SampleData:TranslationsItem Value="Senectus dapibus nulla primis egestas porta rutrum" />
+            <SampleData:TranslationsItem Value="Sociosqu quis purus sapien urna risus velit" />
           </SampleData:MeaningsItem.Translations>
         </SampleData:MeaningsItem>
       </SampleData:WordsItem.Meanings>

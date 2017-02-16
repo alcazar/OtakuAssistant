@@ -12,7 +12,7 @@
     <Page.Resources>
         <DataTemplate x:Key="WordsItemTemplate">
             <RelativePanel x:Name="WordItem" Height="48">
-                <TextBlock x:Name="Hanzi" Margin="10,0" Text="{Binding Hanzi, Converter={StaticResource SearchViewNameWrapper}}" HorizontalAlignment="Center" FontSize="{Binding Hanzi, Converter={StaticResource SearchViewNameSize}}" Width="100" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignBottomWithPanel="True" TextAlignment="Center" VerticalAlignment="Center" MaxLines="2"/>
+                <TextBlock x:Name="Hanzi" Margin="10,0" Text="{Binding Hanzi, Converter={StaticResource SearchViewHanziWrapper}}" HorizontalAlignment="Center" FontSize="{Binding Hanzi, Converter={StaticResource SearchViewHanziSize}}" Width="100" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignBottomWithPanel="True" TextAlignment="Center" VerticalAlignment="Center" MaxLines="2"/>
                 <TextBlock x:Name="traditional" Text="{Binding Traditional}" FontSize="16" VerticalAlignment="Bottom" RelativePanel.Above="translations" Margin="0,0,5,0" RelativePanel.AlignRightWithPanel="True">
                     <TextBlock.Foreground>
                         <SolidColorBrush Color="{ThemeResource SystemChromeHighColor}"/>
@@ -39,7 +39,7 @@
 
     <RelativePanel>
         <TextBox x:Name="SearchBox" Height="4" Style="{StaticResource AutoSuggestBoxTextBoxStyle}" TextWrapping="Wrap" Text="" PlaceholderText="Search" d:LayoutOverrides="TopPosition, BottomPosition" TextChanged="searchBox_TextChanged" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignTopWithPanel="True" Margin="40"/>
-        <ListView x:Name="WordListView" RelativePanel.Below="SearchBox" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignBottomWithPanel="True" VerticalAlignment="Top" ItemClick="wordListView_ItemClick" IsItemClickEnabled="True" ItemsSource="{Binding Words}" ItemTemplate="{StaticResource WordsItemTemplate}">
+        <ListView x:Name="WordListView" RelativePanel.Below="SearchBox" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignBottomWithPanel="True" ItemClick="wordListView_ItemClick" IsItemClickEnabled="True" ItemsSource="{Binding Words}" ItemTemplate="{StaticResource WordsItemTemplate}">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />

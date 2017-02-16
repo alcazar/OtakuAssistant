@@ -50,6 +50,6 @@
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="TranslationsItem">
-    <xs:attribute name="Value" type="xs:string" />
+    <xs:attribute blend:FormatParameters="8,8" name="Value" type="xs:string" />
   </xs:complexType>
 </xs:schema>

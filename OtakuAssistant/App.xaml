@@ -7,8 +7,10 @@
     RequestedTheme="Dark">
     <Application.Resources>
         <SampleData:SampleWord x:Key="SampleWord" d:IsDataSource="True"/>
-        <local:SearchViewNameSize x:Key="SearchViewNameSize"/>
-        <local:SearchViewNameWrapper x:Key="SearchViewNameWrapper"/>
+        <local:SearchViewHanziSize x:Key="SearchViewHanziSize"/>
+        <local:SearchViewHanziWrapper x:Key="SearchViewHanziWrapper"/>
+        <local:WordViewHanziSize x:Key="WordViewHanziSize"/>
+        <local:WordViewHanziWrapper x:Key="WordViewHanziWrapper"/>
         <local:WordViewPinyinLine x:Key="WordViewPinyinLine"/>
     </Application.Resources>
 </Application>

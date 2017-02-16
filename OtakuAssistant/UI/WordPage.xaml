@@ -6,13 +6,14 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    d:DataContext="{Binding Source={StaticResource SampleWord}, Path=Words[3]}"
+    d:DataContext="{Binding Source={StaticResource SampleWord}, Path=Words[5]}"
     MaxWidth="500"
     >
     <Page.Resources>
         <DataTemplate x:Key="TranslationTemplate">
             <RelativePanel>
-                <TextBlock Text="{Binding Value}" FontSize="20" Margin="50,0,0,0"/>
+                <Ellipse Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="12" Width="12" Margin="32,9,0,0" Stroke="Black" VerticalAlignment="Top" />
+                <TextBlock x:Name="Translation" Text="{Binding Value}" FontSize="20" Margin="50,0,0,0" TextWrapping="WrapWholeWords"/>
             </RelativePanel>
         </DataTemplate>
         <DataTemplate x:Key="MeaningTemplate">
@@ -22,15 +23,8 @@
                         <SolidColorBrush Color="{ThemeResource SystemChromeHighColor}"/>
                     </TextBlock.Foreground>
                 </TextBlock>
-                <ListView x:Name="Translations" ItemTemplate="{StaticResource TranslationTemplate}" ItemsSource="{Binding Translations}" RelativePanel.Below="Pinyins" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" SelectionMode="None">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Margin" Value="0"/>
-                            <Setter Property="MinHeight" Value="0"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                </ListView>
+                <ItemsControl x:Name="Translations" ItemTemplate="{StaticResource TranslationTemplate}" ItemsSource="{Binding Translations}" RelativePanel.Below="Pinyins" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True">
+                </ItemsControl>
             </RelativePanel>
         </DataTemplate>
     </Page.Resources>
@@ -47,8 +41,8 @@
     </Page.BottomAppBar>
 
     <RelativePanel Margin="0">
-        <TextBlock x:Name="Hanzi" Margin="0,32,0,31" TextWrapping="Wrap" Text="{Binding Hanzi}" FontSize="72" FontStretch="ExtraCondensed" Width="Auto" Height="Auto" HorizontalAlignment="Center" VerticalAlignment="Top" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True"/>
-        <ListView x:Name="Meanings" VerticalAlignment="Top" RelativePanel.Below="Hanzi" RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" ItemTemplate="{StaticResource MeaningTemplate}" ItemsSource="{Binding Meanings}" SelectionMode="None">
+        <TextBlock x:Name="Hanzi" Margin="0,32,0,31" TextWrapping="Wrap" Text="{Binding Hanzi, Converter={StaticResource WordViewHanziWrapper}}" FontSize="{Binding Hanzi, Converter={StaticResource WordViewHanziSize}}" FontStretch="ExtraCondensed" Width="Auto" Height="Auto" HorizontalAlignment="Center" VerticalAlignment="Top" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True"/>
+        <ListView x:Name="Meanings" RelativePanel.Below="Hanzi" RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" ItemTemplate="{StaticResource MeaningTemplate}" ItemsSource="{Binding Meanings}" SelectionMode="None">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
