@@ -14,7 +14,7 @@
     </xs:complexType>
     <xs:complexType name="Word">
         <xs:sequence>
-            <xs:element name="Name" type="xs:string"></xs:element>
+            <xs:element name="Hanzi" type="xs:string"></xs:element>
             <xs:element name="Traditional" type="xs:string" minOccurs="0"></xs:element>
             <xs:element name="Radicals" type="xs:string" minOccurs="0"></xs:element>
             <xs:element name="Link" type="xs:anyURI" minOccurs="0"></xs:element>

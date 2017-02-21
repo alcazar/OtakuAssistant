@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Xml;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,33 +29,29 @@ namespace OtakuLib
 
         protected class XmlDictionaryLoadJob : DictionaryLoadJob
         {
-            private List<string> TagsBuilder = new List<string>();
-            private List<Str> PinyinsBuilder = new List<Str>();
-            private List<Str> TranslationsBuilder = new List<Str>();
-            private List<Meaning> MeaningsBuilder = new List<Meaning>();
-            private List<Str> AllPinyinsBuilder = new List<Str>();
+            private StringListMemoryBuilder TagsBuilder = new StringListMemoryBuilder();
+            private StringListMemoryBuilder PinyinsBuilder = new StringListMemoryBuilder();
+            private StringListMemoryBuilder TranslationsBuilder = new StringListMemoryBuilder();
+
+            private List<string> ThumbPinyinBuilder = new List<string>();
+            private List<string> ThumbTranslationBuilder = new List<string>();
 
             public XmlDictionaryLoadJob(Stream stream, CancellationToken cancellationToken, bool buildThumbs)
                 : base(stream, cancellationToken, buildThumbs)
             {
-
             }
 
-            public override List<Word> LoadDictionaryPart()
+            public override void LoadDictionaryPart()
             {
                 XmlReader reader = XmlReader.Create(LoadStream);
-
-                List<Word> words = new List<Word>();
-            
+                
                 while (reader.ReadToFollowing("Word"))
                 {
-                    words.Add(BuildWord(reader));
+                    Words.Add(BuildWord(reader));
                     JobCancellationToken.ThrowIfCancellationRequested();
                 }
 
                 reader.Dispose();
-
-                return words;
             }
 
             private enum Cursor
@@ -72,10 +69,15 @@ namespace OtakuLib
 
             private Word BuildWord(XmlReader reader)
             {
-                Word word = new Word();
+                string hanzi = string.Empty;
+                string traditional = string.Empty;
+                string radicals = string.Empty;
+                string link = string.Empty;
+                string thumbPinyin = string.Empty;
+                string thumbTranslation = string.Empty;
 
-                reader.ReadToFollowing("Name");
-                word.Hanzi = reader.ReadElementContentAsString();
+                reader.ReadToFollowing("Hanzi");
+                hanzi = reader.ReadElementContentAsString();
 
                 Cursor cursor = Cursor.Traditional;
                 int wordDepth = reader.Depth;
@@ -87,27 +89,27 @@ namespace OtakuLib
 
                         if (cursor <= Cursor.Traditional && name == "Traditional")
                         {
-                            word.Traditional = reader.ReadElementContentAsString();
+                            traditional = reader.ReadElementContentAsString();
                             cursor = Cursor.Traditional + 1;
                         }
                         else if (cursor <= Cursor.Radicals && name == "Radicals")
                         {
-                            word.Radicals = reader.ReadElementContentAsString();
+                            radicals = reader.ReadElementContentAsString();
                             cursor = Cursor.Radicals + 1;
                         }
                         else if (cursor <= Cursor.Link && name == "Link")
                         {
-                            word.Link = reader.ReadElementContentAsString();
+                            link = reader.ReadElementContentAsString();
                             cursor = Cursor.Link + 1;
                         }
                         else if (cursor <= Cursor.ThumbPinyin && name == "ThumbPinyin")
                         {
-                            word.ThumbPinyin = reader.ReadElementContentAsString();
+                            thumbPinyin = reader.ReadElementContentAsString();
                             cursor = Cursor.ThumbPinyin + 1;
                         }
                         else if (cursor <= Cursor.ThumbTranslation && name == "ThumbTranslation")
                         {
-                            word.ThumbTranslation = reader.ReadElementContentAsString();
+                            thumbTranslation = reader.ReadElementContentAsString();
                             cursor = Cursor.ThumbTranslation + 1;
                         }
                         else if (cursor <= Cursor.Meaning && name == "Meaning")
@@ -122,19 +124,21 @@ namespace OtakuLib
                                     {
                                         string pinyin = reader.ReadElementContentAsString();
                                         PinyinsBuilder.Add(pinyin);
-                                        AllPinyinsBuilder.Add(pinyin);
+                                        ThumbPinyinBuilder.Add(pinyin);
                                     }
                                     else
                                     {
                                         cursor = Cursor.MeaningTranslation;
-                                        TranslationsBuilder.Add(reader.ReadElementContentAsString());
+                                        string translation = reader.ReadElementContentAsString();
+                                        TranslationsBuilder.Add(translation);
+                                        if (MeaningMemoryBuilder.MeaningMemory.Count == MeaningMemoryBuilder.MeaningStart)
+                                        {
+                                            ThumbTranslationBuilder.Add(translation);
+                                        }
                                     }
                                 }
                             }
-                            Meaning meaning = new Meaning();
-                            meaning.Pinyins = PinyinsBuilder.ToArray();
-                            meaning.Translations = TranslationsBuilder.ToArray();
-                            MeaningsBuilder.Add(meaning);
+                            MeaningMemoryBuilder.Add(PinyinsBuilder, TranslationsBuilder);
 
                             PinyinsBuilder.Clear();
                             TranslationsBuilder.Clear();
@@ -150,23 +154,23 @@ namespace OtakuLib
                     }
                 }
 
-                word.Meanings = MeaningsBuilder.ToArray();
-
-                // save space if no tags
-                word.Tags = TagsBuilder.Count > 0 ? TagsBuilder.ToArray() : null;
-
-                if (word.ThumbPinyin == null)
+                if (thumbPinyin == string.Empty)
                 {
-                    word.ThumbPinyin = BuildThumb(AllPinyinsBuilder);
+                    thumbPinyin = BuildThumb(ThumbPinyinBuilder);
                 }
-                if (word.ThumbTranslation == null)
+                if (thumbTranslation == string.Empty)
                 {
-                    word.ThumbTranslation = BuildThumb(MeaningsBuilder[0].Translations);
+                    thumbTranslation = BuildThumb(ThumbTranslationBuilder);
                 }
+
+                Word word = new Word(StringMemoryBuilder, StringLengthMemoryBuilder,
+                    hanzi, traditional, thumbPinyin, thumbTranslation, radicals, link,
+                    MeaningMemoryBuilder, TagsBuilder);
             
                 TagsBuilder.Clear();
-                MeaningsBuilder.Clear();
-                AllPinyinsBuilder.Clear();
+                MeaningMemoryBuilder.Clear();
+                ThumbPinyinBuilder.Clear();
+                ThumbTranslationBuilder.Clear();
 
                 return word;
             }

@@ -10,20 +10,20 @@
     d:DataContext="{Binding Source={StaticResource SampleWord}}"
     MaxWidth="500">
     <Page.Resources>
-        <DataTemplate x:Key="WordsItemTemplate">
-            <RelativePanel x:Name="WordItem" Height="48">
-                <TextBlock x:Name="Hanzi" Margin="10,0" Text="{Binding Hanzi, Converter={StaticResource SearchViewHanziWrapper}}" HorizontalAlignment="Center" FontSize="{Binding Hanzi, Converter={StaticResource SearchViewHanziSize}}" Width="100" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignBottomWithPanel="True" TextAlignment="Center" VerticalAlignment="Center" MaxLines="2"/>
-                <TextBlock x:Name="traditional" Text="{Binding Traditional}" FontSize="16" VerticalAlignment="Bottom" RelativePanel.Above="translations" Margin="0,0,5,0" RelativePanel.AlignRightWithPanel="True">
+        <DataTemplate x:Key="WordsItemTemplate" x:DataType="OtakuLib:SearchItem">
+            <RelativePanel x:Name="WordItem" Height="48" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                <TextBlock x:Name="Hanzi" Margin="10,0" Text="{x:Bind Hanzi, Converter={StaticResource SearchViewHanziWrapper}}" HorizontalAlignment="Center" FontSize="{x:Bind Hanzi, Converter={StaticResource SearchViewHanziSize}}" Width="100" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignBottomWithPanel="True" TextAlignment="Center" VerticalAlignment="Center" MaxLines="2" Height="40" IsColorFontEnabled="False"/>
+                <TextBlock x:Name="traditional" Text="{x:Bind Traditional}" FontSize="16" VerticalAlignment="Bottom" Margin="0,0,5,0" RelativePanel.AlignRightWithPanel="True" HorizontalAlignment="Right" Height="22">
                     <TextBlock.Foreground>
                         <SolidColorBrush Color="{ThemeResource SystemChromeHighColor}"/>
                     </TextBlock.Foreground>
                 </TextBlock>
-                <TextBlock x:Name="pinyins" Text="{Binding ThumbPinyin}" FontSize="14" VerticalAlignment="Bottom" RelativePanel.RightOf="Hanzi" RelativePanel.Above="translations" RelativePanel.LeftOf="traditional">
+                <TextBlock x:Name="pinyins" Text="{x:Bind ThumbPinyin}" FontSize="14" VerticalAlignment="Top" RelativePanel.LeftOf="traditional" Margin="120,0,0,0" RelativePanel.AlignLeftWithPanel="True" HorizontalAlignment="Left" Height="19">
                     <TextBlock.Foreground>
                         <SolidColorBrush Color="{ThemeResource SystemChromeHighColor}"/>
                     </TextBlock.Foreground>
                 </TextBlock>
-                <TextBlock x:Name="translations" Text="{Binding ThumbTranslation}" FontSize="20" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" IsColorFontEnabled="False" RelativePanel.AlignBottomWithPanel="True" RelativePanel.RightOf="Hanzi" RelativePanel.AlignRightWithPanel="True"/>
+                <TextBlock x:Name="translations" Text="{x:Bind ThumbTranslation}" FontSize="20" VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis" IsColorFontEnabled="False" HorizontalAlignment="Left" Margin="120,0,0,0" RelativePanel.AlignBottomWithPanel="True" Height="27"/>
             </RelativePanel>
         </DataTemplate>
     </Page.Resources>
@@ -42,11 +42,31 @@
         <ListView x:Name="WordListView" RelativePanel.Below="SearchBox" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignBottomWithPanel="True" ItemClick="wordListView_ItemClick" IsItemClickEnabled="True" ItemsSource="{Binding Words}" ItemTemplate="{StaticResource WordsItemTemplate}">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                    <Setter Property="Padding" Value="0"/>
-                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListViewItem">
+                                <ListViewItemPresenter Height="48" Width="{Binding ActualWidth, ElementName=WordListView}" />
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
                 </Style>
             </ListView.ItemContainerStyle>
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel VirtualizationMode="Recycling" />
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+            <ListView.Template>
+                <ControlTemplate>
+                    <Border>
+                        <Grid>
+                            <ScrollViewer>
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </ListView.Template>
         </ListView>
     </RelativePanel>
 </Page>

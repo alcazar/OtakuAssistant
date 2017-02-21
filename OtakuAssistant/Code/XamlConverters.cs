@@ -18,27 +18,23 @@ namespace OtakuAssistant
             string str = value as string;
             if (str == null)
             {
-                return 0;
+                return 0.0;
             }
             else if (str.Length <= 3)
             {
-                return 30;
+                return 30.0;
             }
             else if (str.Length <= 4)
             {
-                return 24;
+                return 24.0;
             }
             else if (str.Length <= 5)
             {
-                return 20;
-            }
-            else if (str.Length <= 10)
-            {
-                return 18;
+                return 20.0;
             }
             else
             {
-                return 14;
+                return 14.0;
             }
         }
 
@@ -79,26 +75,22 @@ namespace OtakuAssistant
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            string str = value as string;
-            if (str == null)
+            StringPointer str = (StringPointer)value;
+            if (str.Length <= 6)
             {
-                return 0;
-            }
-            else if (str.Length <= 6)
-            {
-                return 48;
+                return 48.0;
             }
             else if (str.Length <= 12)
             {
-                return 40;
+                return 40.0;
             }
             else if (str.Length <= 20)
             {
-                return 32;
+                return 32.0;
             }
             else
             {
-                return 24;
+                return 24.0;
             }
         }
 
@@ -112,7 +104,7 @@ namespace OtakuAssistant
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            string str = value as string;
+            StringPointer str = (StringPointer)value;
             if (str.Length <= 5)
             {
                 return str;
@@ -139,10 +131,10 @@ namespace OtakuAssistant
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            Str[] pinyins = value as Str[];
+            StringList? pinyins = value as StringList?;
             if (pinyins != null)
             {
-                return string.Join(", ", pinyins);
+                return string.Join(", ", pinyins.Value);
             }
             else
             {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,6 +13,8 @@ namespace DictionaryBinarizer
     {
         static void Main(string[] args)
         {
+            Directory.SetCurrentDirectory("../../../OtakuAssistant");
+
             DotNetFS fs = new DotNetFS();
 
             new XmlDictionaryLoader("Cedict_CN_ENG", fs, false);

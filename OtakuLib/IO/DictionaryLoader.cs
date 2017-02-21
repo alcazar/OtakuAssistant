@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Xml;
+using System.Text;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +15,8 @@ namespace OtakuLib
 
         public Task<WordDictionary> LoadTask { get; private set; }
         public CancellationTokenSource LoadTaskCanceller { get; private set; }
+
+        protected virtual bool AlreadySorted { get { return false; } }
 
         protected PortableFS FS;
         protected bool BuildThumbs;
@@ -42,27 +44,74 @@ namespace OtakuLib
         {
             // spawn jobs
             List<DictionaryLoadJob> dictionaryLoadJobs = await GetDictionaryLoadJobs();
-            List<Task<List<Word>>> jobTasks = new List<Task<List<Word>>>();
+            List<Task> jobTasks = new List<Task>();
             foreach (DictionaryLoadJob dictionaryLoadJob in dictionaryLoadJobs)
             {
-                jobTasks.Add(Task.Run((Func<List<Word>>)dictionaryLoadJob.LoadDictionaryPart, LoadTaskCanceller.Token));
+                jobTasks.Add(Task.Run((Action)dictionaryLoadJob.LoadDictionaryPart, LoadTaskCanceller.Token));
             }
 
             // wait for all jobs to complete
             Task.WaitAll(jobTasks.ToArray(), LoadTaskCanceller.Token);
             
-            // merge results
+            StringBuilder StringMemoryBuilder = new StringBuilder();
+            List<ushort> StringLengthMemoryBuilder = new List<ushort>();
+            List<MeaningMemory> MeaningMemoryBuilder = new List<MeaningMemory>();
+
             List<Word> words = new List<Word>();
-            foreach (Task<List<Word>> dictionaryLoadJob in jobTasks)
+
+            foreach (DictionaryLoadJob dictionaryLoadJob in dictionaryLoadJobs)
             {
-                words.AddRange(dictionaryLoadJob.Result);
-                dictionaryLoadJob.Result.Clear();
-                dictionaryLoadJob.Result.TrimExcess();
+                foreach (Word word in dictionaryLoadJob.Words)
+                {
+                    word.StringStart += StringMemoryBuilder.Length;
+                    word.ListStart += StringLengthMemoryBuilder.Count;
+                    word.MeaningsMemory.MeaningStart += MeaningMemoryBuilder.Count;
+                }
+                words.AddRange(dictionaryLoadJob.Words);
+
+                StringMemoryBuilder.Append(dictionaryLoadJob.StringMemoryBuilder);
+                StringLengthMemoryBuilder.AddRange(dictionaryLoadJob.StringLengthMemoryBuilder);
+                MeaningMemoryBuilder.AddRange(dictionaryLoadJob.MeaningMemoryBuilder.MeaningMemory);
             }
+
+            WordDictionary.StringMemory = StringMemoryBuilder.ToString();
+            WordDictionary.StringLengthMemory = StringLengthMemoryBuilder.ToArray();
+            WordDictionary.MeaningMemory = MeaningMemoryBuilder.ToArray();
 
             foreach (DictionaryLoadJob dictionaryLoadJob in dictionaryLoadJobs)
             {
                 dictionaryLoadJob.Dispose();
+            }
+
+            if (!AlreadySorted)
+            {
+                // sort
+                words.Sort();
+            
+                // repack everything...
+                StringMemoryBuilder.Clear();
+                StringLengthMemoryBuilder.Clear();
+                MeaningMemoryBuilder.Clear();
+
+                foreach (Word word in words)
+                {
+                    StringMemoryBuilder.Append(WordDictionary.StringMemory.Substring(word.StringStart, word.TotalStringLength));
+                    for (int i = 0; i < word.TotalListLength; ++i)
+                    {
+                        StringLengthMemoryBuilder.Add(WordDictionary.StringLengthMemory[word.ListStart + i]);
+                    }
+                    for (int i = 0; i < word.MeaningsMemory.MeaningLength; ++i)
+                    {
+                        MeaningMemoryBuilder.Add(WordDictionary.MeaningMemory[word.MeaningsMemory.MeaningStart + i]);
+                    }
+                    word.StringStart = StringMemoryBuilder.Length - word.TotalStringLength;
+                    word.ListStart = StringLengthMemoryBuilder.Count - word.TotalListLength;
+                    word.MeaningsMemory.MeaningStart = MeaningMemoryBuilder.Count - word.MeaningsMemory.MeaningLength;
+                }
+
+                WordDictionary.StringMemory = StringMemoryBuilder.ToString();
+                WordDictionary.StringLengthMemory = StringLengthMemoryBuilder.ToArray();
+                WordDictionary.MeaningMemory = MeaningMemoryBuilder.ToArray();
             }
 
             // create the dictionary
@@ -75,6 +124,11 @@ namespace OtakuLib
             protected Stream LoadStream;
             protected CancellationToken JobCancellationToken;
             protected bool BuildThumbs;
+            
+            internal List<Word> Words = new List<Word>();
+            internal StringBuilder StringMemoryBuilder = new StringBuilder();
+            internal List<ushort> StringLengthMemoryBuilder = new List<ushort>();
+            internal MeaningListMemoryBuilder MeaningMemoryBuilder = new MeaningListMemoryBuilder();
 
             public DictionaryLoadJob(Stream stream, CancellationToken cancellationToken, bool buildThumbs)
             {
@@ -103,18 +157,18 @@ namespace OtakuLib
                 }
             }
 
-            public abstract List<Word> LoadDictionaryPart();
+            public abstract void LoadDictionaryPart();
             
             private List<string> ThumbBuilder = new List<string>();
             private List<string> ThumbSmall = new List<string>();
             private List<string> ThumbMedium = new List<string>();
             private List<string> ThumbLarge = new List<string>();
 
-            protected string BuildThumb(IEnumerable<Str> list)
+            protected string BuildThumb(IEnumerable<string> list)
             {
                 if (!BuildThumbs)
                 {
-                    return null;
+                    return string.Empty;
                 }
 
                 const int maxThumbCharacters = 32;

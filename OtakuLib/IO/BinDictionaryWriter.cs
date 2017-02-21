@@ -32,7 +32,7 @@ namespace OtakuLib
             BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8);
 
             // version
-            writer.Write((int)0);
+            writer.Write((int)1);
             // number of parts
             writer.Write((int)dictionaryWriteJobs.Count);
 
@@ -78,37 +78,31 @@ namespace OtakuLib
                     Word word = Dictionary[w];
 
                     writer.Write(word.Hanzi);
-                    writer.Write(word.Traditional ?? string.Empty);
-                    writer.Write(word.Link ?? string.Empty);
-                    writer.Write(word.ThumbPinyin ?? string.Empty);
-                    writer.Write(word.ThumbTranslation ?? string.Empty);
+                    writer.Write(word.Traditional);
+                    writer.Write(word.Radicals);
+                    writer.Write(word.Link);
+                    writer.Write(word.ThumbPinyin);
+                    writer.Write(word.ThumbTranslation);
 
-                    writer.Write((byte)word.Meanings.Length);
+                    writer.Write((byte)word.Meanings.Count);
                     foreach (Meaning meaning in word.Meanings)
                     {
-                        writer.Write((byte)meaning.Pinyins.Length);
+                        writer.Write((byte)meaning.Pinyins.Count);
                         foreach (string pinyin in meaning.Pinyins)
                         {
                             writer.Write(pinyin);
                         }
-                        writer.Write((byte)meaning.Translations.Length);
+                        writer.Write((byte)meaning.Translations.Count);
                         foreach (string translation in meaning.Translations)
                         {
                             writer.Write(translation);
                         }
                     }
-
-                    if (word.Tags == null)
+                    
+                    writer.Write((byte)word.Tags.Count);
+                    foreach (string tag in word.Tags)
                     {
-                        writer.Write((byte)0);
-                    }
-                    else
-                    {
-                        writer.Write((byte)word.Tags.Length);
-                        foreach (string tag in word.Tags)
-                        {
-                            writer.Write(tag);
-                        }
+                        writer.Write(tag);
                     }
                 }
 

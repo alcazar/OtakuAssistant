@@ -3,13 +3,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace OtakuLib
 {
-    public struct SearchItem : IComparable<SearchItem>
+    public class SearchItem
     {
         public float Relevance;
         public Word Word;
+
+        public SearchItem(Word word, float relevance)
+        {
+            Word = word;
+            Relevance = relevance;
+        }
 
         public string Hanzi             { get { return Word.Hanzi; } }
         public string Traditional
@@ -21,44 +28,70 @@ namespace OtakuLib
                     : string.Empty;
             }
         }
-        public string ThumbPinyin       { get { return Word.ThumbPinyin; } }
-        public string ThumbTranslation  { get { return Word.ThumbTranslation; } }
-
-        public int CompareTo(SearchItem other)
+        public string ThumbPinyin
         {
-            float diff = Relevance - other.Relevance;
-            if (diff == 0)
+            get
             {
-                int _diff = Hanzi.CompareTo(other.Hanzi);
-                if (_diff == 0)
-                {
-                    return (Traditional ?? string.Empty).CompareTo(other.Traditional ?? string.Empty);
-                }
-                return _diff;
+#if DEBUG
+                return string.Format("{1:0.000} {0}", Word.ThumbPinyin, Relevance);
+#else
+                return Word.ThumbPinyin;
+#endif
             }
-            return -(int)(diff * (1 << 16));
         }
+        public string ThumbTranslation  { get { return Word.ThumbTranslation; } }
     }
 
     // typedef hack
+    [System.Runtime.InteropServices.ComVisible(false)]
     public class SearchResult : List<SearchItem> { }
 
     public class WordSearch
     {
-        const int MaxSearchResultCount = 100;
-        const float MinRelevance = 0.5f;
+        private struct SearchItem : IComparable<SearchItem>
+        {
+            public float Relevance;
+            public Word Word;
 
-        private string SearchText;
+            public SearchItem(Word word, float relevance)
+            {
+                Word = word;
+                Relevance = relevance;
+            }
+
+            public int CompareTo(SearchItem other)
+            {
+                float diff = Relevance - other.Relevance;
+                if (diff == 0)
+                {
+                    int _diff = Word.Hanzi.CompareTo(other.Word.Hanzi);
+                    if (_diff == 0)
+                    {
+                        return Word.Traditional.CompareTo(other.Word.Traditional);
+                    }
+                    return _diff;
+                }
+                return -(int)(diff * (1 << 16));
+            }
+        }
+
+        public const int MaxSearchResultCount = 25;
+        public const float MinRelevance = 0.75f;
+
+        public SearchQuery Query;
 
         public Task<SearchResult> SearchTask { get; private set; }
         public CancellationTokenSource SearchTaskCanceller { get; private set; }
 
-        public WordSearch(string searchText)
+        private WordSearch WaitForComplete = null;
+        private Task<List<SearchItem>>[] SearchJobs = null;
+
+        public WordSearch(string searchText, WordSearch waitForComplete = null)
         {
-            SearchText = searchText;
+            Query = new SearchQuery(searchText);
 
+            WaitForComplete = waitForComplete;
             SearchTaskCanceller = new CancellationTokenSource();
-
             SearchTask = Task.Run((Func<SearchResult>)Search, SearchTaskCanceller.Token);
         }
 
@@ -66,117 +99,114 @@ namespace OtakuLib
         {
             CancellationToken cancellationToken = SearchTaskCanceller.Token;
 
-            Task<WordDictionary> dictionaryLoader = DictionaryLoader.Current.LoadTask;
-            while (!dictionaryLoader.IsCompleted)
+            if (WaitForComplete != null)
             {
-                Task.Delay(50);
-                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    WaitForComplete.SearchTask.Wait(cancellationToken);
+                }
+                catch (AggregateException) { }
+
+                if (WaitForComplete.SearchJobs != null)
+                {
+                    try
+                    {
+                        Task.WaitAll(WaitForComplete.SearchJobs, cancellationToken);
+                    }
+                    catch (AggregateException) { }
+                }
+                WaitForComplete = null;
             }
+
+            Task<WordDictionary> dictionaryLoader = DictionaryLoader.Current.LoadTask;
+            if (!dictionaryLoader.IsCompleted)
+            {
+                dictionaryLoader.Wait(cancellationToken);
+            }
+
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
 
             WordDictionary dictionary = dictionaryLoader.Result;
 
             const int wordSliceSize = 20000;
             int wordSliceStart = 0;
             int wordSliceEnd = wordSliceSize;
-
-            List<Task<SearchResult>> searchJobs = new List<Task<SearchResult>>();
-            while (wordSliceStart < dictionary.Count)
+            
+            SearchJobs = new Task<List<SearchItem>>[(dictionary.Count + wordSliceSize - 1)/wordSliceSize];
+            for (int i = 0; i < SearchJobs.Length; ++i)
             {
-                SearchWorkJob searchJob = new SearchWorkJob(SearchText, dictionary, wordSliceStart, Math.Min(wordSliceEnd, dictionary.Count), SearchTaskCanceller.Token);
+                SearchWorkJob searchJob = new SearchWorkJob(Query, dictionary, wordSliceStart, Math.Min(wordSliceEnd, dictionary.Count), cancellationToken);
                 
-                searchJobs.Add(Task.Run((Func<SearchResult>)searchJob.Run, SearchTaskCanceller.Token));
+                SearchJobs[i] = Task.Run((Func<List<SearchItem>>)searchJob.Run, cancellationToken);
 
                 wordSliceStart = wordSliceEnd;
                 wordSliceEnd += wordSliceSize;
             }
+            Task.WaitAll(SearchJobs, cancellationToken);
 
-            Task.WaitAll(searchJobs.ToArray(), SearchTaskCanceller.Token);
-
-            SearchResult searchResults = new SearchResult();
-            foreach (Task<SearchResult> searchJob in searchJobs)
+            List<SearchItem> internalSearchResults = new List<SearchItem>();
+            foreach (Task<List<SearchItem>> searchJob in SearchJobs)
             {
-                searchResults.AddRange(searchJob.Result);
+                internalSearchResults.AddRange(searchJob.Result);
                 searchJob.Result.Clear();
                 searchJob.Result.TrimExcess();
             }
 
-            searchResults.Sort();
-
-            if (searchResults.Count > MaxSearchResultCount)
+            internalSearchResults.Sort();
+            
+            SearchResult searchResults = new SearchResult();
+            int len = Math.Min(internalSearchResults.Count, MaxSearchResultCount);
+            for (int i = 0; i < len; ++i)
             {
-                searchResults.RemoveRange(MaxSearchResultCount, searchResults.Count - MaxSearchResultCount);
+                searchResults.Add(new OtakuLib.SearchItem(internalSearchResults[i].Word, internalSearchResults[i].Relevance));
             }
+
+            internalSearchResults.Clear();
+            internalSearchResults.TrimExcess();
+
+            stopWatch.Stop();
+            
+            Debug.WriteLine("Search time: {0}ms", stopWatch.ElapsedMilliseconds);
 
             return searchResults;
         }
 
         private class SearchWorkJob
         {
-            private string SearchText;
+            private SearchQuery Query;
             private WordDictionary Dictionary;
             private int JobSliceStart;
             private int JobSliceEnd;
 
             private CancellationToken JobCancellationToken;
 
-            public SearchWorkJob(string searchText, WordDictionary dictionary, int jobSliceStart, int jobSliceEnd, CancellationToken cancellationToken)
+            public SearchWorkJob(SearchQuery query, WordDictionary dictionary, int jobSliceStart, int jobSliceEnd, CancellationToken cancellationToken)
             {
-                SearchText = searchText;
                 Dictionary = dictionary;
                 JobSliceStart = jobSliceStart;
                 JobSliceEnd = jobSliceEnd;
                 JobCancellationToken = cancellationToken;
+                Query = query;
             }
             
-            public SearchResult Run()
+            public List<SearchItem> Run()
             {
-                bool searchTextIsChinese = SearchText.IsChinese();
-
-                SearchResult searchResults = new SearchResult();
-                SearchItem searchResult = new SearchItem();
+                List<SearchItem> searchResults = new List<SearchItem>();
 
                 for (int i = JobSliceStart; i < JobSliceEnd; ++i)
                 {
-                    JobCancellationToken.ThrowIfCancellationRequested();
+                    if ((i & 255) == 0)
+                    {
+                        JobCancellationToken.ThrowIfCancellationRequested();
+                    }
 
                     Word word = Dictionary[i];
-
-                    searchResult.Word = word;
-
-                    float nameRelevance = 0;
-                    float pinyinRelevance = 0;
-                    float translationRelevance = 0;
-                
-                    if (searchTextIsChinese)
-                    {
-                        nameRelevance = word.Hanzi.Search(SearchText);
-                        if (nameRelevance == 0)
-                        {
-                            nameRelevance = SearchText.Search(word.Hanzi) * 0.85f;
-                        }
-                    }
-
-                    foreach (Meaning meaning in word.Meanings)
-                    {
-                        float factor = 1;
-                        foreach (string pinyin in meaning.Pinyins)
-                        {
-                            pinyinRelevance = Math.Max(pinyinRelevance, pinyin.Search(SearchText, CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols | CompareOptions.IgnoreNonSpace) * factor);
-                            factor *= 0.95f;
-                        }
-                        factor = 1;
-                        foreach (string translation in meaning.Translations)
-                        {
-                            translationRelevance = Math.Max(translationRelevance, translation.Search(SearchText) * factor);
-                            factor *= 0.95f;
-                        }
-                    }
-
-                    searchResult.Relevance = Math.Max(nameRelevance, Math.Max(pinyinRelevance, translationRelevance));
                     
-                    if (searchResult.Relevance > MinRelevance)
+                    float relevance = Query.SearchWord(word);
+                    if (relevance > MinRelevance)
                     {
-                        searchResults.Add(searchResult);
+                        searchResults.Add(new SearchItem(word, relevance));
                     }
                 }
 

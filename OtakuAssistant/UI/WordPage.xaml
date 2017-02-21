@@ -13,12 +13,12 @@
         <DataTemplate x:Key="TranslationTemplate">
             <RelativePanel>
                 <Ellipse Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="12" Width="12" Margin="32,9,0,0" Stroke="Black" VerticalAlignment="Top" />
-                <TextBlock x:Name="Translation" Text="{Binding Value}" FontSize="20" Margin="50,0,0,0" TextWrapping="WrapWholeWords"/>
+                <TextBlock x:Name="Translation" Text="{Binding Value}" FontSize="20" Margin="50,0,0,0" TextWrapping="WrapWholeWords" IsTextSelectionEnabled="True"/>
             </RelativePanel>
         </DataTemplate>
         <DataTemplate x:Key="MeaningTemplate">
             <RelativePanel>
-                <TextBlock x:Name="Pinyins" FontSize="16" Text="{Binding Pinyins, Converter={StaticResource WordViewPinyinLine}}" Margin="25,0,0,0">
+                <TextBlock x:Name="Pinyins" FontSize="16" Text="{Binding Pinyins, Converter={StaticResource WordViewPinyinLine}}" Margin="25,0,0,0" IsTextSelectionEnabled="True">
                     <TextBlock.Foreground>
                         <SolidColorBrush Color="{ThemeResource SystemChromeHighColor}"/>
                     </TextBlock.Foreground>
@@ -33,7 +33,7 @@
             <CommandBar.Content>
                 <Grid/>
             </CommandBar.Content>
-            <AppBarButton x:Name="FavoriteButton" Icon="Flag" Label="Favorite" Click="FavoriteButton_Click"/>
+            <AppBarButton x:Name="FavoriteButton" Icon="OutlineStar" Label="Favorite" Click="FavoriteButton_Click"/>
             <AppBarButton x:Name="SearchButton" Icon="Find" Label="Search" Click="SearchButton_Click"/>
             <AppBarButton x:Name="BackButton" Icon="Back" Label="Back" Click="BackButton_Click" IsEnabled="{Binding Frame.CanGoBack, ElementName=Page}"/>
             <AppBarButton x:Name="ForwardButton" Icon="Forward" Label="Forward" Click="ForwardButton_Click" IsEnabled="{Binding Frame.CanGoForward, ElementName=Page}"/>
@@ -41,7 +41,7 @@
     </Page.BottomAppBar>
 
     <RelativePanel Margin="0">
-        <TextBlock x:Name="Hanzi" Margin="0,32,0,31" TextWrapping="Wrap" Text="{Binding Hanzi, Converter={StaticResource WordViewHanziWrapper}}" FontSize="{Binding Hanzi, Converter={StaticResource WordViewHanziSize}}" FontStretch="ExtraCondensed" Width="Auto" Height="Auto" HorizontalAlignment="Center" VerticalAlignment="Top" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True"/>
+        <TextBlock x:Name="Hanzi" Margin="0,32,0,31" TextWrapping="Wrap" Text="{Binding Hanzi, Converter={StaticResource WordViewHanziWrapper}}" FontSize="{Binding Hanzi, Converter={StaticResource WordViewHanziSize}}" FontStretch="ExtraCondensed" Width="Auto" Height="Auto" HorizontalAlignment="Center" VerticalAlignment="Top" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" TextAlignment="Center" IsTextSelectionEnabled="True"/>
         <ListView x:Name="Meanings" RelativePanel.Below="Hanzi" RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" ItemTemplate="{StaticResource MeaningTemplate}" ItemsSource="{Binding Meanings}" SelectionMode="None">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">

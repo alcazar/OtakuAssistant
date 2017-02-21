@@ -76,19 +76,22 @@ namespace OtakuAssistant
             {
                 StopSearch();
 
-                CurrentSearch = new WordSearch(searchText);
+                CurrentSearch = new WordSearch(searchText, CurrentSearch);
                 CurrentSearch.SearchTask.ContinueWith(UpdateSearchResults);
             }
         }
 
         private void UpdateSearchResults(Task<SearchResult> task)
         {
-            // backup the search results in case we throw a new search before UI update
-            LastResults = task.Result;
-            // we can safely mark there is no more search ongoing
-            CurrentSearch = null;
+            if (!task.IsCanceled)
+            {
+                // backup the search results in case we throw a new search before UI update
+                LastResults = task.Result;
+                // we can safely mark there is no more search ongoing
+                CurrentSearch = null;
 
-            IAsyncAction action = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, UpdateSearchResultsUI);
+                IAsyncAction action = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, UpdateSearchResultsUI);
+            }
         }
 
         private void UpdateSearchResultsUI()

@@ -6,22 +6,46 @@ cedict_syntax = re.compile(
     r"\[(?P<pinyins>.+?)\]\s*/(?P<translations>.+)/?\Z"
 )
 
-accents = list(map(lambda s : s[:-1], ["̄ ", "́ ", "̌ ", "̄ ", "̈̌ "]))
+accents = list(map(lambda s : s[:-1], ["̄ ", "́ ", "̌ ", "̀ ", "̈̌ "]))
 
 def accentuate(pinyin):
     parts = pinyin.split(" ")
+    last_accent = ""
     for i in range(len(parts)):
         part = parts[i]
         if part == "":
             pass
         elif part == "r5":
-            part = "r"
+            if i > 0:
+                parts[i-1] += "r"
+                part = ""
+            else:
+                part = "r"
         elif part == "xx5":
             part = "xx"
         else:
+            accent = ""
             try:
                 # check if the part ends with a number
-                accent = accents[int(part[-1]) - 1]
+                accent = int(part[-1])
+                if accent == 5:
+                    accent = last_accent
+                else:
+                    accent = accents[accent - 1]
+
+                part = part[:-1]
+            except ValueError:
+                pass
+
+            part = part.replace("u:", "̈u")
+
+            if part[-1] == ":":
+                accent += "̈ "
+                part = part[:-1]
+
+            last_accent = accent
+            if accent != "":
+                accent = accent[0]
 
                 lpart = part.lower()
                 apos = lpart.find("a") + 1
@@ -56,16 +80,10 @@ def accentuate(pinyin):
                     part = part[:mpos] + accent + part[mpos:]
                 else:
                     raise Exception("No vowel to accentuate in {0} '{1}'".format(part, pinyin))
-                
-                # remove extra left over space
-                part = part[:-1]
 
-            except ValueError:
-                # no accent for this one
-                pass
         parts[i] = part
 
-    return " ".join(parts)
+    return " ".join(filter(lambda s : len(s) > 0, parts))
 
 inline_pinyin = re.compile(r"\[([a-zA-Z0-9 ]+)\]")
 def accentuate_inline_pinyin(str):
@@ -124,12 +142,14 @@ with open("cedict_ts.u8", "r", encoding="utf-8") as cedict_in:
 
             for (traditional, simplified), meanings in word_items[part*part_size:(part+1)*part_size]:
                 xml_out.write("    <Word>\n")
-                xml_out.write("        <Name>{0}</Name>\n".format(simplified.strip()))
+                xml_out.write("        <Hanzi>{0}</Hanzi>\n".format(simplified.strip()))
         
                 if traditional != simplified: 
                     xml_out.write("        <Traditional>{0}</Traditional>\n".format(traditional.strip()))
-
-                for pinyins, translations in meanings.items():
+                
+                meanings = list(meanings.items())
+                meanings.sort(key = lambda meaning : len(meaning[1]), reverse = True)
+                for pinyins, translations in meanings:
                     xml_out.write("        <Meaning>\n")
                     for pinyin in pinyins.split(","):
                         xml_out.write("            <Pinyin>{0}</Pinyin>\n".format(accentuate(pinyin.strip())))

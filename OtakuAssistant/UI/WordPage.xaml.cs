@@ -55,7 +55,7 @@ namespace OtakuAssistant
 
         private void SearchButton_Click(object sender, RoutedEventArgs e)
         {
-            Frame.Navigate(typeof(WordSearchPage), PageWord.Hanzi);
+            Frame.Navigate(typeof(WordSearchPage), PageWord.Hanzi.Value);
         }
 
         private void FavoriteButton_Click(object sender, RoutedEventArgs e)

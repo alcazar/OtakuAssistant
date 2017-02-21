@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" IgnorableNamespaces="uap mp">
-  <Identity Name="42569AlexisPayendelaGaran.OtakuAssistant" Publisher="CN=695361AB-D7F6-47D7-98B2-398C38782D3F" Version="1.1.1.0" />
+  <Identity Name="42569AlexisPayendelaGaran.OtakuAssistant" Publisher="CN=695361AB-D7F6-47D7-98B2-398C38782D3F" Version="1.1.2.0" />
   <mp:PhoneIdentity PhoneProductId="fe007c91-cefc-45d1-bc5a-4e37c448f9cc" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>OtakuAssistant</DisplayName>
