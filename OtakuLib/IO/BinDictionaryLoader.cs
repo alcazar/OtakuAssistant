@@ -67,12 +67,12 @@ namespace OtakuLib
             {
                 BinaryReader reader = new BinaryReader(LoadStream, Encoding.UTF8);
                 
-                StringListMemoryBuilder TagsBuilder = new StringListMemoryBuilder();
-                StringListMemoryBuilder PinyinsBuilder = new StringListMemoryBuilder();
-                StringListMemoryBuilder TranslationsBuilder = new StringListMemoryBuilder();
+                StringPointerBuilder pinyinsBuilder = new StringPointerBuilder();
+                StringPointerBuilder translationsBuilder = new StringPointerBuilder();
+                StringPointerBuilder tagsBuilder = new StringPointerBuilder();
 
-                List<string> ThumbPinyinBuilder = new List<string>();
-                List<string> ThumbTranslationBuilder = new List<string>();
+                List<string> thumbPinyinBuilder = new List<string>();
+                List<string> thumbTranslationBuilder = new List<string>();
 
                 while(LoadStream.Position < LoadStream.Length)
                 {
@@ -100,49 +100,49 @@ namespace OtakuLib
                         for (byte j = 0; j < pinyinCount; ++j)
                         {
                             string pinyin = reader.ReadString();
-                            PinyinsBuilder.Add(pinyin);
-                            ThumbPinyinBuilder.Add(pinyin);
+                            pinyinsBuilder.Add(pinyin);
+                            thumbPinyinBuilder.Add(pinyin);
                         }
                         byte translationCount = reader.ReadByte();
                         for (byte j = 0; j < translationCount; ++j)
                         {
                             string translation = reader.ReadString();
-                            TranslationsBuilder.Add(translation);
-                            if (MeaningMemoryBuilder.MeaningMemory.Count == MeaningMemoryBuilder.MeaningStart)
+                            translationsBuilder.Add(translation);
+                            if (MeaningBuilder.MeaningMemory.Count == MeaningBuilder.MeaningStart)
                             {
-                                ThumbTranslationBuilder.Add(translation);
+                                thumbTranslationBuilder.Add(translation);
                             }
                         }
                             
-                        MeaningMemoryBuilder.Add(PinyinsBuilder, TranslationsBuilder);
+                        MeaningBuilder.Add(pinyinsBuilder, translationsBuilder);
 
-                        PinyinsBuilder.Clear();
-                        TranslationsBuilder.Clear();
+                        pinyinsBuilder.Clear();
+                        translationsBuilder.Clear();
                     }
 
                     byte tagCount = reader.ReadByte();
                     for (byte i = 0; i < tagCount; ++i)
                     {
-                        TagsBuilder.Add(reader.ReadString());
+                        tagsBuilder.Add(reader.ReadString());
                     }
 
                     if (thumbPinyin == string.Empty)
                     {
-                        thumbPinyin = BuildThumb(ThumbPinyinBuilder);
+                        thumbPinyin = BuildThumb(thumbPinyinBuilder);
                     }
                     if (thumbTranslation == string.Empty)
                     {
-                        thumbTranslation = BuildThumb(ThumbTranslationBuilder);
+                        thumbTranslation = BuildThumb(thumbTranslationBuilder);
                     }
 
-                    Words.Add(new Word(StringMemoryBuilder, StringLengthMemoryBuilder,
+                    Words.Add(new Word(StringBuilder,
                         hanzi, traditional, thumbPinyin, thumbTranslation, radicals, link,
-                        MeaningMemoryBuilder, TagsBuilder));
+                        MeaningBuilder, tagsBuilder));
                     
-                    TagsBuilder.Clear();
-                    MeaningMemoryBuilder.Clear();
-                    ThumbPinyinBuilder.Clear();
-                    ThumbTranslationBuilder.Clear();
+                    tagsBuilder.Clear();
+                    MeaningBuilder.Clear();
+                    thumbPinyinBuilder.Clear();
+                    thumbTranslationBuilder.Clear();
                 }
             }
         }

@@ -9,32 +9,28 @@ namespace OtakuLib
 {
     internal struct MeaningMemory
     {
-        internal readonly StringListMemory Pinyins;
-        internal readonly StringListMemory Translations;
+        internal readonly byte PinyinCount;
+        internal readonly byte TranslationCount;
 
-        internal MeaningMemory(StringListMemory pinyins, StringListMemory translations)
+        internal MeaningMemory(StringPointerBuilder pinyins, StringPointerBuilder translations)
         {
-            Pinyins = pinyins;
-            Translations = translations;
+            PinyinCount = (byte)pinyins.StringPointers.Count;
+            TranslationCount = (byte)translations.StringPointers.Count;
         }
     }
 
     public struct Meaning
     {
-        private readonly int PinyinStringStart;
         private readonly int PinyinListStart;
-        private readonly int TranslationStringStart;
         private readonly int TranslationListStart;
         private readonly MeaningMemory MeaningMemory;
 
-        public StringList Pinyins { get { return new StringList(PinyinStringStart, PinyinListStart, MeaningMemory.Pinyins.ListLength); } }
-        public StringList Translations { get { return new StringList( TranslationStringStart, TranslationListStart, MeaningMemory.Translations.ListLength); } }
+        public StringList Pinyins { get { return new StringList(PinyinListStart, MeaningMemory.PinyinCount); } }
+        public StringList Translations { get { return new StringList(TranslationListStart, MeaningMemory.TranslationCount); } }
 
-        internal Meaning(int pinyinStringStart, int pinyinListStart, int translationStringStart, int translationListStart, MeaningMemory meaningMemory)
+        internal Meaning(int pinyinListStart, int translationListStart, MeaningMemory meaningMemory)
         {
-            PinyinStringStart = pinyinStringStart;
             PinyinListStart = pinyinListStart;
-            TranslationStringStart = translationStringStart;
             TranslationListStart = translationListStart;
             MeaningMemory = meaningMemory;
         }
@@ -45,59 +41,53 @@ namespace OtakuLib
         internal int MeaningStart;
         internal readonly byte MeaningLength;
 
-        internal MeaningListMemory(MeaningListMemoryBuilder builder)
+        internal MeaningListMemory(MeaningListBuilder builder)
         {
             MeaningStart = builder.MeaningStart;
             MeaningLength = (byte)(builder.MeaningMemory.Count - builder.MeaningStart);
         }
     }
 
-    internal class MeaningListMemoryBuilder
+    internal class MeaningListBuilder
     {
-        internal StringListMemoryBuilder PinyinMemory = new StringListMemoryBuilder();
-        internal StringListMemoryBuilder TranslationMemory = new StringListMemoryBuilder();
+        internal StringPointerBuilder Pinyins = new StringPointerBuilder();
+        internal StringPointerBuilder Translations = new StringPointerBuilder();
         internal List<MeaningMemory> MeaningMemory = new List<MeaningMemory>();
         internal int MeaningStart = 0;
 
         internal void Clear()
         {
-            PinyinMemory.Clear();
-            TranslationMemory.Clear();
+            Pinyins.Clear();
+            Translations.Clear();
             MeaningStart = MeaningMemory.Count;
         }
 
-        internal void Add(StringListMemoryBuilder pinyins, StringListMemoryBuilder translations)
+        internal void Add(StringPointerBuilder pinyins, StringPointerBuilder translations)
         {
-            PinyinMemory.StringMemory.Append(pinyins.StringMemory);
-            PinyinMemory.ListMemory.AddRange(pinyins.ListMemory);
-            TranslationMemory.StringMemory.Append(translations.StringMemory);
-            TranslationMemory.ListMemory.AddRange(translations.ListMemory);
-            MeaningMemory.Add(new MeaningMemory(new StringListMemory(pinyins), new StringListMemory(translations)));
+            Pinyins.Append(pinyins);
+            Translations.Append(translations);
+            MeaningMemory.Add(new MeaningMemory(pinyins, translations));
         }
     }
 
     public struct MeaningList : IEnumerable<Meaning>
     {
-        private readonly int PinyinStringStart;
         private readonly int PinyinListStart;
-        private readonly int TranslationStringStart;
         private readonly int TranslationListStart;
         private readonly MeaningListMemory MeaningListMemory;
 
         public int Count { get { return MeaningListMemory.MeaningLength; } }
 
-        internal MeaningList(int pinyinStringStart, int pinyinListStart, int translationStringStart, int translationListStart, MeaningListMemory meaningListMemory)
+        internal MeaningList(int pinyinListStart, int translationListStart, MeaningListMemory meaningListMemory)
         {
-            PinyinStringStart = pinyinStringStart;
             PinyinListStart = pinyinListStart;
-            TranslationStringStart = translationStringStart;
             TranslationListStart = translationListStart;
             MeaningListMemory = meaningListMemory;
         }
 
         public Enumerator GetEnumerator()
         {
-            return new Enumerator(PinyinStringStart, PinyinListStart, TranslationStringStart, TranslationListStart, MeaningListMemory);
+            return new Enumerator(PinyinListStart, TranslationListStart, MeaningListMemory);
         }
 
         IEnumerator<Meaning> IEnumerable<Meaning>.GetEnumerator()
@@ -112,18 +102,14 @@ namespace OtakuLib
 
         public struct Enumerator : IEnumerator<Meaning>
         {
-            private int PinyinStringStart;
             private int PinyinListStart;
-            private int TranslationStringStart;
             private int TranslationListStart;
             private MeaningListMemory MeaningListMemory;
             private int MeaningIndex;
 
-            internal Enumerator(int pinyinStringStart, int pinyinListStart, int translationStringStart, int translationListStart, MeaningListMemory meaningListMemory)
+            internal Enumerator(int pinyinListStart, int translationListStart, MeaningListMemory meaningListMemory)
             {
-                PinyinStringStart = pinyinStringStart;
                 PinyinListStart = pinyinListStart;
-                TranslationStringStart = translationStringStart;
                 TranslationListStart = translationListStart;
                 MeaningListMemory = meaningListMemory;
                 MeaningIndex = -1;
@@ -133,7 +119,7 @@ namespace OtakuLib
             {
                 get
                 {
-                    return new Meaning(PinyinStringStart, PinyinListStart, TranslationStringStart, TranslationListStart, WordDictionary.MeaningMemory[MeaningListMemory.MeaningStart + MeaningIndex]);
+                    return new Meaning(PinyinListStart, TranslationListStart, WordDictionary.MeaningMemory[MeaningListMemory.MeaningStart + MeaningIndex]);
                 }
             }
 
@@ -154,10 +140,8 @@ namespace OtakuLib
                 if (MeaningIndex >= 0)
                 {
                     MeaningMemory meaning = WordDictionary.MeaningMemory[MeaningListMemory.MeaningStart + MeaningIndex];
-                    PinyinStringStart += meaning.Pinyins.ListStringSize;
-                    PinyinListStart += meaning.Pinyins.ListLength;
-                    TranslationStringStart += meaning.Translations.ListStringSize;
-                    TranslationListStart += meaning.Translations.ListLength;
+                    PinyinListStart += meaning.PinyinCount;
+                    TranslationListStart += meaning.TranslationCount;
                 }
 
                 ++MeaningIndex;

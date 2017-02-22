@@ -29,29 +29,9 @@ namespace OtakuLib
 
         protected class XmlDictionaryLoadJob : DictionaryLoadJob
         {
-            private StringListMemoryBuilder TagsBuilder = new StringListMemoryBuilder();
-            private StringListMemoryBuilder PinyinsBuilder = new StringListMemoryBuilder();
-            private StringListMemoryBuilder TranslationsBuilder = new StringListMemoryBuilder();
-
-            private List<string> ThumbPinyinBuilder = new List<string>();
-            private List<string> ThumbTranslationBuilder = new List<string>();
-
             public XmlDictionaryLoadJob(Stream stream, CancellationToken cancellationToken, bool buildThumbs)
                 : base(stream, cancellationToken, buildThumbs)
             {
-            }
-
-            public override void LoadDictionaryPart()
-            {
-                XmlReader reader = XmlReader.Create(LoadStream);
-                
-                while (reader.ReadToFollowing("Word"))
-                {
-                    Words.Add(BuildWord(reader));
-                    JobCancellationToken.ThrowIfCancellationRequested();
-                }
-
-                reader.Dispose();
             }
 
             private enum Cursor
@@ -67,112 +47,126 @@ namespace OtakuLib
                 Tag,
             }
 
-            private Word BuildWord(XmlReader reader)
+            public override void LoadDictionaryPart()
             {
-                string hanzi = string.Empty;
-                string traditional = string.Empty;
-                string radicals = string.Empty;
-                string link = string.Empty;
-                string thumbPinyin = string.Empty;
-                string thumbTranslation = string.Empty;
+                XmlReader reader = XmlReader.Create(LoadStream);
+                
+                StringPointerBuilder pinyinBuilder = new StringPointerBuilder();
+                StringPointerBuilder translationBuilder = new StringPointerBuilder();
+                StringPointerBuilder tagBuilder = new StringPointerBuilder();
 
-                reader.ReadToFollowing("Hanzi");
-                hanzi = reader.ReadElementContentAsString();
-
-                Cursor cursor = Cursor.Traditional;
-                int wordDepth = reader.Depth;
-                while (reader.Read() && reader.Depth >= wordDepth)
+                List<string> thumbPinyinBuilder = new List<string>();
+                List<string> thumbTranslationBuilder = new List<string>();
+            
+                while (reader.ReadToFollowing("Word"))
                 {
-                    if (reader.NodeType == XmlNodeType.Element)
-                    {
-                        string name = reader.Name;
+                    JobCancellationToken.ThrowIfCancellationRequested();
 
-                        if (cursor <= Cursor.Traditional && name == "Traditional")
+                    string hanzi = string.Empty;
+                    string traditional = string.Empty;
+                    string radicals = string.Empty;
+                    string link = string.Empty;
+                    string thumbPinyin = string.Empty;
+                    string thumbTranslation = string.Empty;
+
+                    reader.ReadToFollowing("Hanzi");
+                    hanzi = reader.ReadElementContentAsString();
+
+                    Cursor cursor = Cursor.Traditional;
+                    int wordDepth = reader.Depth;
+                    while (reader.Read() && reader.Depth >= wordDepth)
+                    {
+                        if (reader.NodeType == XmlNodeType.Element)
                         {
-                            traditional = reader.ReadElementContentAsString();
-                            cursor = Cursor.Traditional + 1;
-                        }
-                        else if (cursor <= Cursor.Radicals && name == "Radicals")
-                        {
-                            radicals = reader.ReadElementContentAsString();
-                            cursor = Cursor.Radicals + 1;
-                        }
-                        else if (cursor <= Cursor.Link && name == "Link")
-                        {
-                            link = reader.ReadElementContentAsString();
-                            cursor = Cursor.Link + 1;
-                        }
-                        else if (cursor <= Cursor.ThumbPinyin && name == "ThumbPinyin")
-                        {
-                            thumbPinyin = reader.ReadElementContentAsString();
-                            cursor = Cursor.ThumbPinyin + 1;
-                        }
-                        else if (cursor <= Cursor.ThumbTranslation && name == "ThumbTranslation")
-                        {
-                            thumbTranslation = reader.ReadElementContentAsString();
-                            cursor = Cursor.ThumbTranslation + 1;
-                        }
-                        else if (cursor <= Cursor.Meaning && name == "Meaning")
-                        {
-                            int meaningDepth = reader.Depth;
-                            cursor = Cursor.ThumbPinyin;
-                            while (reader.Read() && reader.Depth > meaningDepth)
+                            string name = reader.Name;
+
+                            if (cursor <= Cursor.Traditional && name == "Traditional")
                             {
-                                if (reader.NodeType == XmlNodeType.Element)
+                                traditional = reader.ReadElementContentAsString();
+                                cursor = Cursor.Traditional + 1;
+                            }
+                            else if (cursor <= Cursor.Radicals && name == "Radicals")
+                            {
+                                radicals = reader.ReadElementContentAsString();
+                                cursor = Cursor.Radicals + 1;
+                            }
+                            else if (cursor <= Cursor.Link && name == "Link")
+                            {
+                                link = reader.ReadElementContentAsString();
+                                cursor = Cursor.Link + 1;
+                            }
+                            else if (cursor <= Cursor.ThumbPinyin && name == "ThumbPinyin")
+                            {
+                                thumbPinyin = reader.ReadElementContentAsString();
+                                cursor = Cursor.ThumbPinyin + 1;
+                            }
+                            else if (cursor <= Cursor.ThumbTranslation && name == "ThumbTranslation")
+                            {
+                                thumbTranslation = reader.ReadElementContentAsString();
+                                cursor = Cursor.ThumbTranslation + 1;
+                            }
+                            else if (cursor <= Cursor.Meaning && name == "Meaning")
+                            {
+                                int meaningDepth = reader.Depth;
+                                cursor = Cursor.ThumbPinyin;
+                                while (reader.Read() && reader.Depth > meaningDepth)
                                 {
-                                    if (cursor <= Cursor.MeaningPinyin && reader.Name == "Pinyin")
+                                    if (reader.NodeType == XmlNodeType.Element)
                                     {
-                                        string pinyin = reader.ReadElementContentAsString();
-                                        PinyinsBuilder.Add(pinyin);
-                                        ThumbPinyinBuilder.Add(pinyin);
-                                    }
-                                    else
-                                    {
-                                        cursor = Cursor.MeaningTranslation;
-                                        string translation = reader.ReadElementContentAsString();
-                                        TranslationsBuilder.Add(translation);
-                                        if (MeaningMemoryBuilder.MeaningMemory.Count == MeaningMemoryBuilder.MeaningStart)
+                                        if (cursor <= Cursor.MeaningPinyin && reader.Name == "Pinyin")
                                         {
-                                            ThumbTranslationBuilder.Add(translation);
+                                            string pinyin = reader.ReadElementContentAsString();
+                                            pinyinBuilder.Add(pinyin);
+                                            thumbPinyinBuilder.Add(pinyin);
+                                        }
+                                        else
+                                        {
+                                            cursor = Cursor.MeaningTranslation;
+                                            string translation = reader.ReadElementContentAsString();
+                                            translationBuilder.Add(translation);
+                                            if (MeaningBuilder.MeaningMemory.Count == MeaningBuilder.MeaningStart)
+                                            {
+                                                thumbTranslationBuilder.Add(translation);
+                                            }
                                         }
                                     }
                                 }
+                                MeaningBuilder.Add(pinyinBuilder, translationBuilder);
+
+                                pinyinBuilder.Clear();
+                                translationBuilder.Clear();
+
+                                cursor = Cursor.Meaning;
                             }
-                            MeaningMemoryBuilder.Add(PinyinsBuilder, TranslationsBuilder);
-
-                            PinyinsBuilder.Clear();
-                            TranslationsBuilder.Clear();
-
-                            cursor = Cursor.Meaning;
-                        }
-                        else// if (cursor <= Cursor.Tag && name == "Tag")
-                        {
-                            // tag is the last element, we do not need to check
-                            cursor = Cursor.Tag;
-                            TagsBuilder.Add(reader.ReadElementContentAsString());
+                            else// if (cursor <= Cursor.Tag && name == "Tag")
+                            {
+                                // tag is the last element, we do not need to check
+                                cursor = Cursor.Tag;
+                                tagBuilder.Add(reader.ReadElementContentAsString());
+                            }
                         }
                     }
-                }
 
-                if (thumbPinyin == string.Empty)
-                {
-                    thumbPinyin = BuildThumb(ThumbPinyinBuilder);
-                }
-                if (thumbTranslation == string.Empty)
-                {
-                    thumbTranslation = BuildThumb(ThumbTranslationBuilder);
-                }
+                    if (thumbPinyin == string.Empty)
+                    {
+                        thumbPinyin = BuildThumb(thumbPinyinBuilder);
+                    }
+                    if (thumbTranslation == string.Empty)
+                    {
+                        thumbTranslation = BuildThumb(thumbTranslationBuilder);
+                    }
 
-                Word word = new Word(StringMemoryBuilder, StringLengthMemoryBuilder,
-                    hanzi, traditional, thumbPinyin, thumbTranslation, radicals, link,
-                    MeaningMemoryBuilder, TagsBuilder);
+                    Words.Add(new Word(StringBuilder,
+                        hanzi, traditional, thumbPinyin, thumbTranslation, radicals, link,
+                        MeaningBuilder, tagBuilder));
             
-                TagsBuilder.Clear();
-                MeaningMemoryBuilder.Clear();
-                ThumbPinyinBuilder.Clear();
-                ThumbTranslationBuilder.Clear();
+                    tagBuilder.Clear();
+                    MeaningBuilder.Clear();
+                    thumbPinyinBuilder.Clear();
+                    thumbTranslationBuilder.Clear();
+                }
 
-                return word;
+                reader.Dispose();
             }
         }
     }

@@ -7,7 +7,7 @@ namespace OtakuLib
     public class WordDictionary : IReadOnlyList<Word>
     {
         public static string StringMemory { get; set; }
-        internal static ushort[] StringLengthMemory { get; set; }
+        internal static StringPointer[] StringPointerMemory { get; set; }
         internal static MeaningMemory[] MeaningMemory { get; set; }
 
         private List<Word> Words;

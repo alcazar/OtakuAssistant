@@ -53,9 +53,9 @@ namespace OtakuLib
             // wait for all jobs to complete
             Task.WaitAll(jobTasks.ToArray(), LoadTaskCanceller.Token);
             
-            StringBuilder StringMemoryBuilder = new StringBuilder();
-            List<ushort> StringLengthMemoryBuilder = new List<ushort>();
-            List<MeaningMemory> MeaningMemoryBuilder = new List<MeaningMemory>();
+            // merge results
+            StringPointerBuilder stringBuilder = new StringPointerBuilder();
+            List<MeaningMemory> meaningMemoryBuilder = new List<MeaningMemory>();
 
             List<Word> words = new List<Word>();
 
@@ -63,20 +63,18 @@ namespace OtakuLib
             {
                 foreach (Word word in dictionaryLoadJob.Words)
                 {
-                    word.StringStart += StringMemoryBuilder.Length;
-                    word.ListStart += StringLengthMemoryBuilder.Count;
-                    word.MeaningsMemory.MeaningStart += MeaningMemoryBuilder.Count;
+                    word.WordStart += stringBuilder.StringPointers.Count;
+                    word.MeaningsMemory.MeaningStart += meaningMemoryBuilder.Count;
                 }
                 words.AddRange(dictionaryLoadJob.Words);
 
-                StringMemoryBuilder.Append(dictionaryLoadJob.StringMemoryBuilder);
-                StringLengthMemoryBuilder.AddRange(dictionaryLoadJob.StringLengthMemoryBuilder);
-                MeaningMemoryBuilder.AddRange(dictionaryLoadJob.MeaningMemoryBuilder.MeaningMemory);
+                stringBuilder.Append(dictionaryLoadJob.StringBuilder);
+                meaningMemoryBuilder.AddRange(dictionaryLoadJob.MeaningBuilder.MeaningMemory);
             }
 
-            WordDictionary.StringMemory = StringMemoryBuilder.ToString();
-            WordDictionary.StringLengthMemory = StringLengthMemoryBuilder.ToArray();
-            WordDictionary.MeaningMemory = MeaningMemoryBuilder.ToArray();
+            WordDictionary.StringMemory = stringBuilder.StringBuilder.ToString();
+            WordDictionary.StringPointerMemory = stringBuilder.StringPointers.ToArray();
+            WordDictionary.MeaningMemory = meaningMemoryBuilder.ToArray();
 
             foreach (DictionaryLoadJob dictionaryLoadJob in dictionaryLoadJobs)
             {
@@ -89,29 +87,48 @@ namespace OtakuLib
                 words.Sort();
             
                 // repack everything...
-                StringMemoryBuilder.Clear();
-                StringLengthMemoryBuilder.Clear();
-                MeaningMemoryBuilder.Clear();
+                stringBuilder.Clear();
+
+                MeaningListBuilder meaningBuilder = new MeaningListBuilder();
+                StringPointerBuilder pinyinBuilder = new StringPointerBuilder();
+                StringPointerBuilder translationBuilder = new StringPointerBuilder();
+                StringPointerBuilder tagBuilder = new StringPointerBuilder();
 
                 foreach (Word word in words)
                 {
-                    StringMemoryBuilder.Append(WordDictionary.StringMemory.Substring(word.StringStart, word.TotalStringLength));
-                    for (int i = 0; i < word.TotalListLength; ++i)
+                    foreach (Meaning meaning in word.Meanings)
                     {
-                        StringLengthMemoryBuilder.Add(WordDictionary.StringLengthMemory[word.ListStart + i]);
-                    }
-                    for (int i = 0; i < word.MeaningsMemory.MeaningLength; ++i)
-                    {
-                        MeaningMemoryBuilder.Add(WordDictionary.MeaningMemory[word.MeaningsMemory.MeaningStart + i]);
-                    }
-                    word.StringStart = StringMemoryBuilder.Length - word.TotalStringLength;
-                    word.ListStart = StringLengthMemoryBuilder.Count - word.TotalListLength;
-                    word.MeaningsMemory.MeaningStart = MeaningMemoryBuilder.Count - word.MeaningsMemory.MeaningLength;
-                }
+                        foreach (StringPointer pinyin in meaning.Pinyins)
+                        {
+                            pinyinBuilder.Add(pinyin);
+                        }
 
-                WordDictionary.StringMemory = StringMemoryBuilder.ToString();
-                WordDictionary.StringLengthMemory = StringLengthMemoryBuilder.ToArray();
-                WordDictionary.MeaningMemory = MeaningMemoryBuilder.ToArray();
+                        foreach (StringPointer translation in meaning.Translations)
+                        {
+                            translationBuilder.Add(translation);
+                        }
+
+                        meaningBuilder.Add(pinyinBuilder, translationBuilder);
+
+                        pinyinBuilder.Clear();
+                        translationBuilder.Clear();
+                    }
+
+                    foreach (StringPointer tag in word.Tags)
+                    {
+                        tagBuilder.Add(tag);
+                    }
+
+                    new Word(stringBuilder,
+                        word.Hanzi, word.Traditional, word.ThumbPinyin, word.ThumbTranslation, word.Radicals, word.Link, meaningBuilder, tagBuilder);
+
+                    meaningBuilder.Clear();
+                    tagBuilder.Clear();
+                }
+                
+                WordDictionary.StringMemory = stringBuilder.StringBuilder.ToString();
+                WordDictionary.StringPointerMemory = stringBuilder.StringPointers.ToArray();
+                WordDictionary.MeaningMemory = meaningBuilder.MeaningMemory.ToArray();
             }
 
             // create the dictionary
@@ -126,9 +143,8 @@ namespace OtakuLib
             protected bool BuildThumbs;
             
             internal List<Word> Words = new List<Word>();
-            internal StringBuilder StringMemoryBuilder = new StringBuilder();
-            internal List<ushort> StringLengthMemoryBuilder = new List<ushort>();
-            internal MeaningListMemoryBuilder MeaningMemoryBuilder = new MeaningListMemoryBuilder();
+            internal StringPointerBuilder StringBuilder = new StringPointerBuilder();
+            internal MeaningListBuilder MeaningBuilder = new MeaningListBuilder();
 
             public DictionaryLoadJob(Stream stream, CancellationToken cancellationToken, bool buildThumbs)
             {

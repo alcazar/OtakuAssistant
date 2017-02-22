@@ -6,91 +6,62 @@ namespace OtakuLib
 {
     public class Word : IComparable<Word>
     {
-        internal int StringStart;
-        internal int ListStart;
-
-        internal readonly byte HanziLength;
-        internal readonly byte TraditionalLength;
-        internal readonly byte ThumbPinyinLength;
-        internal readonly byte ThumbTranslationLength;
-
-        internal readonly StringListMemory PinyinsMemory;
-        internal readonly StringListMemory TranslationsMemory;
-        internal readonly StringListMemory TagsMemory;
+        internal int WordStart;
+        private const byte HanziOffset = 0;
+        private const byte TraditionalOffset = 1;
+        private const byte ThumbPinyinOffset = 2;
+        private const byte ThumbTranslationOffset = 3;
+        private const byte RadicalsLength = 4;
+        private const byte LinkOffset = 5;
+        
+        internal int ListStart { get { return WordStart + 6; } }
+        internal readonly byte PinyinListLength;
+        internal readonly byte TranslationListLength;
+        internal readonly byte TagListLength;
         internal MeaningListMemory MeaningsMemory;
 
-        internal readonly byte RadicalsLength;
-        internal readonly byte LinkLength;
-
-        internal int HanziOffset                { get { return StringStart; } }
-        internal int TraditionalOffset          { get { return HanziOffset + HanziLength; } }
-        internal int ThumbPinyinOffset          { get { return TraditionalOffset + TraditionalLength; } }
-        internal int ThumbTranslationOffset     { get { return ThumbPinyinOffset + ThumbPinyinLength; } }
-
-        internal int PinyinsOffset              { get { return ThumbTranslationOffset + ThumbTranslationLength; } }
-        internal int TranslationsOffset         { get { return PinyinsOffset + PinyinsMemory.ListStringSize; } }
-        internal int TagsOffset                 { get { return TranslationsOffset + TranslationsMemory.ListStringSize; } }
-
-        internal int RadicalsOffset             { get { return TagsOffset + TagsMemory.ListStringSize; } }
-        internal int LinkOffset                 { get { return RadicalsOffset + RadicalsLength; } }
-
-        internal int TotalStringLength          { get { return LinkOffset + LinkLength - StringStart; } }
-
-        internal int PinyinsListOffset          { get { return ListStart; } }
-        internal int TranslationsListOffset     { get { return PinyinsListOffset + PinyinsMemory.ListLength; } }
-        internal int TagsListOffset             { get { return TranslationsListOffset + TranslationsMemory.ListLength; } }
+        internal int PinyinListOffset          { get { return ListStart; } }
+        internal int TranslationListOffset     { get { return PinyinListOffset + PinyinListLength; } }
+        internal int TagListOffset             { get { return TranslationListOffset + TranslationListLength; } }
         
-        internal int TotalListLength            { get { return TagsListOffset + TagsMemory.ListLength - ListStart; } }
+        internal int TotalListLength            { get { return PinyinListLength + TranslationListLength + TagListLength; } }
 
-        public StringPointer Hanzi              { get { return new StringPointer(HanziOffset,               HanziLength); } }
-        public StringPointer Traditional        { get { return new StringPointer(TraditionalOffset,         TraditionalLength); } }
-        public StringPointer ThumbPinyin        { get { return new StringPointer(ThumbPinyinOffset,         ThumbPinyinLength); } }
-        public StringPointer ThumbTranslation   { get { return new StringPointer(ThumbTranslationOffset,    ThumbTranslationLength); } }
+        public StringPointer Hanzi              { get { return WordDictionary.StringPointerMemory[WordStart + HanziOffset]; } }
+        public StringPointer Traditional        { get { return WordDictionary.StringPointerMemory[WordStart + TraditionalOffset]; } }
+        public StringPointer ThumbPinyin        { get { return WordDictionary.StringPointerMemory[WordStart + ThumbPinyinOffset]; } }
+        public StringPointer ThumbTranslation   { get { return WordDictionary.StringPointerMemory[WordStart + ThumbTranslationOffset]; } }
+        public StringPointer Radicals           { get { return WordDictionary.StringPointerMemory[WordStart + RadicalsLength]; } }
+        public StringPointer Link               { get { return WordDictionary.StringPointerMemory[WordStart + LinkOffset]; } }
         
-        public StringList Pinyins               { get { return new StringList(PinyinsOffset, PinyinsListOffset, PinyinsMemory.ListLength); } }
-        public StringList Translations          { get { return new StringList(TranslationsOffset, TranslationsListOffset, TranslationsMemory.ListLength); } }
-        public StringList Tags                  { get { return new StringList(TagsOffset, TagsListOffset, TagsMemory.ListLength); } }
-        public MeaningList Meanings             { get { return new MeaningList(PinyinsOffset, PinyinsListOffset, TranslationsOffset, TranslationsListOffset, MeaningsMemory); } }
+        public StringList Pinyins               { get { return new StringList(PinyinListOffset, PinyinListLength); } }
+        public StringList Translations          { get { return new StringList(TranslationListOffset, TranslationListLength); } }
+        public StringList Tags                  { get { return new StringList(TagListOffset, TagListLength); } }
+        public MeaningList Meanings             { get { return new MeaningList(PinyinListOffset, TranslationListOffset, MeaningsMemory); } }
 
-        public StringPointer Radicals           { get { return new StringPointer(RadicalsOffset, RadicalsLength); } }
-        public StringPointer Link               { get { return new StringPointer(LinkOffset, LinkLength); } }
 
         internal Word(
-            StringBuilder stringMemoryBuilder, List<ushort> listMemoryBuilder,
+            StringPointerBuilder stringPointerBuilder,
             string hanzi, string traditional, string thumbPinyin, string thumbTranslation, string radicals, string link,
-            MeaningListMemoryBuilder meaningsListMemoryBuilder, StringListMemoryBuilder tagsListMemoryBuilder)
+            MeaningListBuilder meaningBuilder, StringPointerBuilder tagBuilder)
         {
-            StringStart = stringMemoryBuilder.Length;
-            ListStart = listMemoryBuilder.Count;
+            WordStart = stringPointerBuilder.StringPointers.Count;
 
-            stringMemoryBuilder.Append(hanzi);
-            stringMemoryBuilder.Append(traditional);
-            stringMemoryBuilder.Append(thumbPinyin);
-            stringMemoryBuilder.Append(thumbTranslation);
+            stringPointerBuilder.Add(hanzi);
+            stringPointerBuilder.Add(traditional);
+            stringPointerBuilder.Add(thumbPinyin);
+            stringPointerBuilder.Add(thumbTranslation);
+            stringPointerBuilder.Add(radicals);
+            stringPointerBuilder.Add(link);
 
-            stringMemoryBuilder.Append(meaningsListMemoryBuilder.PinyinMemory.StringMemory);
-            listMemoryBuilder.AddRange(meaningsListMemoryBuilder.PinyinMemory.ListMemory);
-            stringMemoryBuilder.Append(meaningsListMemoryBuilder.TranslationMemory.StringMemory);
-            listMemoryBuilder.AddRange(meaningsListMemoryBuilder.TranslationMemory.ListMemory);
+            stringPointerBuilder.Append(meaningBuilder.Pinyins);
+            stringPointerBuilder.Append(meaningBuilder.Translations);
+            stringPointerBuilder.Append(tagBuilder);
 
-            stringMemoryBuilder.Append(tagsListMemoryBuilder.StringMemory);
-            listMemoryBuilder.AddRange(tagsListMemoryBuilder.ListMemory);
-
-            stringMemoryBuilder.Append(radicals);
-            stringMemoryBuilder.Append(link);
-
-            HanziLength = (byte)hanzi.Length;
-            TraditionalLength = (byte)traditional.Length;
-            ThumbPinyinLength = (byte)thumbPinyin.Length;
-            ThumbTranslationLength = (byte)thumbTranslation.Length;
-
-            PinyinsMemory = new StringListMemory(meaningsListMemoryBuilder.PinyinMemory);
-            TranslationsMemory = new StringListMemory(meaningsListMemoryBuilder.TranslationMemory);
-            MeaningsMemory = new MeaningListMemory(meaningsListMemoryBuilder);
-            TagsMemory = new StringListMemory(tagsListMemoryBuilder);
-
-            RadicalsLength = (byte)radicals.Length;
-            LinkLength = (byte)link.Length;
+            PinyinListLength = (byte)meaningBuilder.Pinyins.StringPointers.Count;
+            TranslationListLength = (byte)meaningBuilder.Translations.StringPointers.Count;
+            TagListLength = (byte)tagBuilder.StringPointers.Count;
+            
+            MeaningsMemory = new MeaningListMemory(meaningBuilder);
         }
 
         public int CompareTo(Word other)

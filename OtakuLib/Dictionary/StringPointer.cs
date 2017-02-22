@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
+using System.Globalization;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace OtakuLib
 {
-    public struct StringPointer : IComparable<StringPointer>, IReadOnlyList<char>
+    public struct StringPointer : IComparable<StringPointer>, IComparable<string>, IReadOnlyList<char>
     {
         public readonly int Start;
-        public readonly int Length;
+        public readonly ushort Length;
+        public readonly ushort ActualLength;
+
+        public static readonly StringPointer Empty = new StringPointer(0, 0, 0);
 
         public int End { get { return Start + Length; } }
-        public int TotalLength { get { return Length; } }
 
         public string Value
         {
@@ -23,10 +25,11 @@ namespace OtakuLib
         public int Count { get { return Length; } }
         public char this[int index] { get { return WordDictionary.StringMemory[Start + index]; } }
 
-        internal StringPointer(int start, int length)
+        internal StringPointer(int start, ushort length, ushort actualLength)
         {
             Start = start;
             Length = length;
+            ActualLength = actualLength;
         }
 
         public static implicit operator string(StringPointer pointer)
@@ -42,6 +45,24 @@ namespace OtakuLib
         public string Substring(int start)
         {
             return Substring(start, Length - start);
+        }
+
+        public int CompareTo(string other)
+        {
+            if (Length == other.Length)
+            {
+                return string.Compare(WordDictionary.StringMemory, Start, other, 0, Length);
+            }
+            else if (Length < other.Length)
+            {
+                int diff = string.Compare(WordDictionary.StringMemory, Start, other, 0, Length);
+                return diff != 0 ? diff : -1;
+            }
+            else
+            {
+                int diff = string.Compare(WordDictionary.StringMemory, Start, other, 0, other.Length);
+                return diff != 0 ? diff : 1;
+            }
         }
 
         public int CompareTo(StringPointer other)
@@ -106,54 +127,52 @@ namespace OtakuLib
         }
     }
 
-    internal struct StringListMemory
+    internal class StringPointerBuilder
     {
-        internal readonly ushort ListStringSize;
-        internal readonly ushort ListLength;
-
-        internal StringListMemory(StringListMemoryBuilder builder)
-        {
-            ListStringSize = (ushort)builder.StringMemory.Length;
-            ListLength = (ushort)builder.ListMemory.Count;
-        }
-    }
-
-    internal class StringListMemoryBuilder
-    {
-        internal StringBuilder StringMemory = new StringBuilder();
-        internal List<ushort> ListMemory = new List<ushort>();
-
+        internal StringBuilder StringBuilder = new StringBuilder();
+        internal List<StringPointer> StringPointers = new List<StringPointer>();
+        
         internal void Clear()
         {
-            StringMemory.Clear();
-            ListMemory.Clear();
+            StringBuilder.Clear();
+            StringPointers.Clear();
         }
 
         internal void Add(string str)
         {
-            StringMemory.Append(str);
-            ListMemory.Add((ushort)str.Length);
+            StringPointers.Add(new StringPointer(StringBuilder.Length, (ushort)str.Length, (ushort)str.ActualLength()));
+            StringBuilder.Append(str);
+        }
+
+        internal void Append(StringPointerBuilder stringList)
+        {
+            int stringOffset = StringBuilder.Length;
+
+            StringBuilder.Append(stringList.StringBuilder);
+
+            foreach (StringPointer stringPointer in stringList.StringPointers)
+            {
+                StringPointers.Add(new StringPointer(stringPointer.Start + stringOffset, stringPointer.Length, stringPointer.ActualLength));
+            }
         }
     }
     
     public struct StringList : IEnumerable<StringPointer>
     {
-        private readonly int StringStart;
         private readonly int ListStart;
         private readonly int ListLength;
 
         public int Count { get { return ListLength; } }
 
-        internal StringList(int stringStart, int listStart, int listLength)
+        internal StringList(int listStart, int listLength)
         {
-            StringStart = stringStart;
             ListStart = listStart;
             ListLength = listLength;
         }
 
         public Enumerator GetEnumerator()
         {
-            return new Enumerator(StringStart, ListStart, ListLength);
+            return new Enumerator(ListStart, ListLength);
         }
 
         IEnumerator<StringPointer> IEnumerable<StringPointer>.GetEnumerator()
@@ -168,16 +187,12 @@ namespace OtakuLib
 
         public struct Enumerator : IEnumerator<StringPointer>
         {
-            private int StringCurrent;
-            private int StringCurrentLength;
             private int ListCurrent;
             private int ListEnd;
 
-            internal Enumerator(int stringStart, int listStart, int listLength)
+            internal Enumerator(int listStart, int listLength)
             {
-                StringCurrent = stringStart;
-                StringCurrentLength = 0;
-                ListCurrent = listStart;
+                ListCurrent = listStart - 1;
                 ListEnd = listStart + listLength;
             }
 
@@ -185,7 +200,7 @@ namespace OtakuLib
             {
                 get
                 {
-                    return new StringPointer(StringCurrent, StringCurrentLength);
+                    return WordDictionary.StringPointerMemory[ListCurrent];
                 }
             }
 
@@ -199,15 +214,8 @@ namespace OtakuLib
 
             public bool MoveNext()
             {
-                if (ListCurrent < ListEnd)
-                {
-                    StringCurrent += StringCurrentLength;
-                    StringCurrentLength = WordDictionary.StringLengthMemory[ListCurrent];
-                    ++ListCurrent;
-                    return true;
-                }
-
-                return false;
+                ++ListCurrent;
+                return ListCurrent < ListEnd;
             }
 
             public void Reset()

@@ -1,23 +1,75 @@
 ﻿using System;
-using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
+using UnicodeNormalization;
 
 namespace OtakuLib
 {
     public static class Extensions
     {
+        public static string RemoveAccents(this string str)
+        {
+            str = str.Normalize(NormalizationForm.FormKD);
+            return new string(str.Where((char c) => { return !c.IsDiacritic(); }).ToArray());
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsBlank(this char c)
         {
             return c <= '.';
         }
-
-        public static string RemoveAccents(this string str)
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsHighSurrogate(this char c)
         {
-            byte[] temp = Encoding.GetEncoding("ISO-8859-8").GetBytes(str);
-            return Encoding.UTF8.GetString(temp, 0, temp.Length).Replace("?", "").Replace("`", "");
+            return (0xD800 <= c && c <= 0xDBFF);
+        }
+        
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsLowSurrogate(this char c)
+        {
+            return (0xDC00 <= c && c <= 0xDFFF);
+        }
+        
+        public static bool IsDiacritic(this char c)
+        {
+            return (0x0300 <= c && c <= 0x036F);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ActualLength(this string str, int start, int length)
+        {
+            int actualLength = 0;
+
+            for (int i = 0; i < length; ++i)
+            {
+                char c = str[i + start];
+                if (c.IsHighSurrogate())
+                {
+                    // skip low surrogate
+                    ++i;
+                    
+                    // two characters marks as one
+                    ++actualLength;
+                }
+                else if (c.IsDiacritic())
+                {
+                    // skip character
+                }
+                else
+                {
+                    // normal character
+                    ++actualLength;
+                }
+            }
+
+            return actualLength;
+        }
+        public static int ActualLength(this string str)
+        {
+            return str.ActualLength(0, str.Length);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -43,6 +95,7 @@ namespace OtakuLib
             }
             else if (0x20000 <= c && c <= 0x2CEAF)
             {
+                // TODO: fixme, char is only 16bit. Handle surrogates
                 // CJK Unified Ideographs Extension B   20000 - 2A6DF
                 // CJK Unified Ideographs Extension C   2A700 – 2B73F
                 // CJK Unified Ideographs Extension D   2B740 – 2B81F

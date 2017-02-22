@@ -64,18 +64,13 @@ namespace OtakuLib
                 float diff = Relevance - other.Relevance;
                 if (diff == 0)
                 {
-                    int _diff = Word.Hanzi.CompareTo(other.Word.Hanzi);
-                    if (_diff == 0)
-                    {
-                        return Word.Traditional.CompareTo(other.Word.Traditional);
-                    }
-                    return _diff;
+                    return Word.CompareTo(other.Word);
                 }
                 return -(int)(diff * (1 << 16));
             }
         }
 
-        public const int MaxSearchResultCount = 25;
+        public const int MaxSearchResultCount = 50;
         public const float MinRelevance = 0.75f;
 
         public SearchQuery Query;

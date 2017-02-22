@@ -10,9 +10,9 @@ namespace OtakuLib
     {
         public readonly string SearchText;
 
-        private string[] SearchWords = null;
         private string[] ChineseSearchWords = null;
-        private string[] PinyinSearchWords = null;
+        private StringSearch[] PinyinSearchWords = null;
+        private StringSearch[] SearchWords = null;
 
         private int SearchScopeMin = 0;
         private int SearchScopeMax = 0;
@@ -23,13 +23,14 @@ namespace OtakuLib
         public SearchQuery(string searchText)
         {
             SearchText = searchText.Replace("'", "");
-            SearchWords = SearchText.Split(WordSeperators, StringSplitOptions.RemoveEmptyEntries);
             
-            List<string> searchWords = new List<string>();
             List<string> chineseSearchWords = new List<string>();
-            List<string> pinyinSearchWords = new List<string>();
-            foreach (string searchWord in SearchWords)
+            List<StringSearch> pinyinSearchWords = new List<StringSearch>();
+            List<StringSearch> searchWords = new List<StringSearch>();
+
+            foreach (string searchWord in SearchText.Split(WordSeperators, StringSplitOptions.RemoveEmptyEntries))
             {
+                StringSearch stringSearch = new StringSearch(searchWord); 
                 if (searchWord.IsChinese())
                 {
                     chineseSearchWords.Add(searchWord);
@@ -38,9 +39,9 @@ namespace OtakuLib
                 {
                     if (searchWord.IsPinyin())
                     {
-                        pinyinSearchWords.Add(searchWord);
+                        pinyinSearchWords.Add(stringSearch);
                     }
-                    searchWords.Add(string.Join(" ", searchWord));
+                    searchWords.Add(stringSearch);
                 }
             }
             SearchWords = searchWords.Count > 0 ? searchWords.ToArray() : null;
@@ -49,112 +50,124 @@ namespace OtakuLib
 
             if (SearchWords != null)
             {
-                int totalCharCount = SearchWords.Aggregate(0, (int acc, string s) => { return acc + s.Length; });
+                int totalCharCount = SearchWords.Aggregate(0, (int acc, StringSearch s) => { return acc + s.SearchLength; });
                 SearchScopeMin = totalCharCount / 2;
                 SearchScopeMax = totalCharCount * 3;
             }
-
-            CurrentCompareInfo = CultureInfo.CurrentCulture.CompareInfo;
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float GetRelevance(StringPointer str, int matchBegin, int matchLength)
-        {
-            int matchEnd = matchBegin + matchLength;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float GetRelevance(StringPointer str, float strActualLength, float matchActualLength, int matchBegin, int matchEnd)
+        {
             bool wordStart = matchBegin == str.Start || WordDictionary.StringMemory[matchBegin - 1].IsBlank();
             bool wordEnd   = matchEnd == str.End || WordDictionary.StringMemory[matchEnd].IsBlank();
 
-            float relevance = (float)matchLength/str.Length;
+            float relevance = matchActualLength/strActualLength;
             relevance += wordStart ? 0.35f : 0f;
             relevance += wordEnd ? 0.2f : 0f;
 
             return relevance;
         }
+        
 
-        private static CompareInfo CurrentCompareInfo;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float GetPinyinRelevance(StringPointer str, float strActualLength, StringSearch search)
+        {
+            StringSearch.Result result = search.SearchIn(str, SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER);
+            
+            return result.Found ? GetRelevance(str, strActualLength, search.SearchActualLength, result.Start, result.End) : 0;
+        }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Compare(StringPointer str, string substr, CompareOptions compareOptions)
+        private static float GetTranslationRelevance(StringPointer str, float strActualLength, StringSearch search)
         {
-            return CurrentCompareInfo.IndexOf(WordDictionary.StringMemory, substr, str.Start, str.Length, compareOptions);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float Search(StringPointer str, string substr)
-        {
-            int index = Compare(str, substr, CompareOptions.IgnoreCase |  CompareOptions.IgnoreNonSpace);
+            StringSearch.Result result = search.SearchIn(str);
             
-            return index >= 0 ? GetRelevance(str, index, substr.Length) : 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SearchNoSpace(StringPointer str, string substr)
-        {
-            int index = Compare(str, substr, CompareOptions.IgnoreCase |  CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreSymbols);
-            
-            return index >= 0 ? (float)substr.Length/str.Length + 0.5f : 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float Search(StringPointer str, string[] searchItems)
-        {
-            float relevance = 0;
-            float factor = 0;
-            foreach (string substr in searchItems)
-            {
-                float wordRelevance = Search(str, substr);
-                if (relevance == 0 && wordRelevance == 0)
-                {
-                    // quick return if the first search item is not a match
-                    return 0;
-                }
-                relevance += wordRelevance;
-                factor += wordRelevance > WordSearch.MinRelevance ? 1 : 0;
-            }
-            return relevance * factor;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SearchNoSpace(StringPointer str, string[] items)
-        {
-            float relevance = 0;
-            float factor = 0;
-            foreach (string substr in items)
-            {
-                float wordRelevance = SearchNoSpace(str, substr);
-                if (relevance == 0 && wordRelevance == 0)
-                {
-                    // quick return if the first search item is not a match
-                    return 0;
-                }
-                relevance += wordRelevance;
-                factor += wordRelevance > WordSearch.MinRelevance ? 1 : 0;
-            }
-            return relevance * factor;
+            return result.Found ? GetRelevance(str, strActualLength, search.SearchActualLength, result.Start, result.End) : 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float SearchHanzi(StringPointer hanzi)
         {
+            float strActualLength = hanzi.ActualLength;
+
             float relevance = 0;
             foreach (string chineseSearchWord in ChineseSearchWords)
             {
-                // check if the word contains our search
-                relevance += Search(hanzi, chineseSearchWord) * 2f;
-                // check if the word is part of the search
-                int index = chineseSearchWord.IndexOf(hanzi);
-                if (index >= 0)
+                StringSearch.Result result;
+
+                // check if the word (AB) is part of the search (ABC)
+                result = StringSearch.Search(hanzi, chineseSearchWord, 0, chineseSearchWord.Length, SearchFlags.NONE);
+
+                if (result.Found)
                 {
                     // in this case, order the results based on character order in the word
-                    relevance += 4 - (float)index/chineseSearchWord.Length;
+                    relevance += 4 - (float)result.Start/chineseSearchWord.Length;
+                }
+
+                // check if the word (AB) contains our search (A)
+                result = StringSearch.Search(chineseSearchWord, 0, chineseSearchWord.Length, hanzi);
+
+                if (result.Found)
+                {
+                    relevance += 2 * (float)chineseSearchWord.Length/hanzi.ActualLength;
                 }
             }
             return relevance;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float SearchHanzi(StringPointer hanzi, StringPointer traditional)
+        public float SearchPinyin(StringPointer str)
+        {
+            float strActualLength = str.ActualLength;
+
+            float relevance = 0;
+            float factor = 0;
+            foreach (StringSearch searchWord in PinyinSearchWords)
+            {
+                float wordRelevance = GetPinyinRelevance(str, strActualLength, searchWord);
+                
+                if (relevance == 0 && wordRelevance == 0)
+                {
+                    // quick return if the first search word is not a match
+                    return 0;
+                }
+
+                relevance += wordRelevance;
+                factor += wordRelevance > WordSearch.MinRelevance ? 1 : 0;
+            }
+            return relevance * factor;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float SearchTranslation(StringPointer translation)
+        {
+            if (!(SearchScopeMin <= translation.Length && translation.Length <= SearchScopeMax))
+            {
+                return 0;
+            }
+
+            float strActualLength = translation.ActualLength;
+
+            float relevance = 0;
+            float factor = 0;
+            foreach (StringSearch searchWord in SearchWords)
+            {
+                float wordRelevance = GetTranslationRelevance(translation, strActualLength, searchWord);
+
+                if (relevance == 0 && wordRelevance == 0)
+                {
+                    // quick return if the first search word is not a match
+                    return 0;
+                }
+                relevance += wordRelevance;
+                factor += wordRelevance > WordSearch.MinRelevance ? 1 : 0;
+            }
+            return relevance * factor;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float SearchHanzis(StringPointer hanzi, StringPointer traditional)
         {
             if (ChineseSearchWords == null)
             {
@@ -169,12 +182,6 @@ namespace OtakuLib
             {
                 return Math.Max(SearchHanzi(hanzi), SearchHanzi(traditional));
             }
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float SearchPinyin(StringPointer pinyin)
-        {
-            return SearchNoSpace(pinyin, PinyinSearchWords);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -194,19 +201,6 @@ namespace OtakuLib
             }
             return relevance;
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float SearchTranslation(StringPointer translation)
-        {
-            if (SearchScopeMin <= translation.Length && translation.Length <= SearchScopeMax)
-            {
-                return Search(translation, SearchWords);
-            }
-            else
-            {
-                return 0;
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float SearchTranslations(StringList translations)
@@ -215,7 +209,6 @@ namespace OtakuLib
             {
                 return 0f;
             }
-
 
             float relevance = 0f;
             float factor = 1f;
@@ -230,7 +223,7 @@ namespace OtakuLib
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float SearchWord(Word word)
         {
-            return Math.Max(SearchHanzi(word.Hanzi, word.Traditional), Math.Max(SearchPinyins(word.Pinyins), SearchTranslations(word.Translations)));
+            return Math.Max(SearchHanzis(word.Hanzi, word.Traditional), Math.Max(SearchPinyins(word.Pinyins), SearchTranslations(word.Translations)));
         }
     }
 }
