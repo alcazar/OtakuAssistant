@@ -156,8 +156,8 @@ namespace OtakuLib
                     MeaningMemory meaning = WordDictionary.MeaningMemory[MeaningListMemory.MeaningStart + MeaningIndex];
                     PinyinStringStart += meaning.Pinyins.ListStringSize;
                     PinyinListStart += meaning.Pinyins.ListLength;
-                    TranslationStringStart = meaning.Translations.ListStringSize;
-                    TranslationListStart = meaning.Translations.ListLength;
+                    TranslationStringStart += meaning.Translations.ListStringSize;
+                    TranslationListStart += meaning.Translations.ListLength;
                 }
 
                 ++MeaningIndex;

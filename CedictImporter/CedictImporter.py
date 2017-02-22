@@ -6,7 +6,7 @@ cedict_syntax = re.compile(
     r"\[(?P<pinyins>.+?)\]\s*/(?P<translations>.+)/?\Z"
 )
 
-accents = list(map(lambda s : s[:-1], ["̄ ", "́ ", "̌ ", "̀ ", "̈̌ "]))
+accents = list(map(lambda s : s[:-1], ["̄ ", "́ ", "̌ ", "̀ "]))
 
 def accentuate(pinyin):
     parts = pinyin.split(" ")
@@ -27,25 +27,24 @@ def accentuate(pinyin):
             accent = ""
             try:
                 # check if the part ends with a number
-                accent = int(part[-1])
-                if accent == 5:
-                    accent = last_accent
-                else:
-                    accent = accents[accent - 1]
+                accent_index = int(part[-1])
+                if accent_index < 5:
+                    accent = accents[accent_index - 1]
 
                 part = part[:-1]
             except ValueError:
                 pass
 
-            part = part.replace("u:", "̈u")
-
             if part[-1] == ":":
-                accent += "̈ "
+                accent = "̈ "[0] + accent
                 part = part[:-1]
+            else:
+                # we have stuff like lu:e4 with an accent on the u and on the e
+                # this only happens with u: so quick fix
+                part = part.replace("u:", "ü")
 
             last_accent = accent
             if accent != "":
-                accent = accent[0]
 
                 lpart = part.lower()
                 apos = lpart.find("a") + 1

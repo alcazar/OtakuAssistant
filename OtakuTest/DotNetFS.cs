@@ -29,7 +29,7 @@ namespace OtakuTest
 
         public Task<Stream> GetFileWriteStream(string filePath)
         {
-            return Task.FromResult((Stream)File.OpenWrite(filePath));
+            return Task.FromResult((Stream)File.Open(filePath, FileMode.Create));
         }
 
         public Task<IReadOnlyList<Stream>> GetFilesWriteStreams(string folderPath)
@@ -37,7 +37,7 @@ namespace OtakuTest
             List<Stream> streams = new List<Stream>();
             foreach (string filePath in Directory.EnumerateFiles(folderPath))
             {
-                streams.Add(File.OpenWrite(filePath));
+                streams.Add(File.Open(filePath, FileMode.Create));
             }
 
             return Task.FromResult((IReadOnlyList<Stream>)streams);

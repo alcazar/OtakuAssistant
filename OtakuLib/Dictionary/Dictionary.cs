@@ -22,9 +22,14 @@ namespace OtakuLib
         {
             get
             {
+                foreach (Word word in Words)
+                {
+                    if (word.Hanzi.CompareTo(hanzi) == 0 || word.Traditional.CompareTo(hanzi) == 0)
+                    {
+                        return word;
+                    }
+                }
                 return null;
-                //int index = Words.BinarySearch(new Word(hanzi));
-                //return index >= 0 ? Words[index] : null;
             }
         }
 

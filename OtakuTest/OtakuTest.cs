@@ -132,5 +132,56 @@ namespace OtakuTest
                 }
             }
         }
+
+        [TestMethod]
+        public void TestPinyinAccents()
+        {
+            Word word = DictionaryLoader.Current.LoadTask.Result["女"];
+            Assert.AreEqual("nǚ, rǔ", word.ThumbPinyin);
+
+            word = DictionaryLoader.Current.LoadTask.Result["恧"];
+            Assert.AreEqual("nǜ", word.ThumbPinyin);
+            
+            word = DictionaryLoader.Current.LoadTask.Result["三略"];
+            Assert.AreEqual("sān lüè", word.ThumbPinyin);
+
+            word = DictionaryLoader.Current.LoadTask.Result["晴"];
+            Assert.AreEqual("qíng", word.ThumbPinyin);
+        }
+
+        [TestMethod]
+        public void TestMultiMeaningEntry()
+        {
+            Word word = DictionaryLoader.Current.LoadTask.Result["食"];
+
+            MeaningList.Enumerator meaning = word.Meanings.GetEnumerator();
+            StringList.Enumerator entry;
+
+            meaning.MoveNext();
+
+            entry = meaning.Current.Pinyins.GetEnumerator();
+            entry.MoveNext();
+            Assert.AreEqual("shí", entry.Current);
+            
+            entry = meaning.Current.Translations.GetEnumerator();
+            entry.MoveNext();
+            Assert.AreEqual("to eat", entry.Current);
+            entry.MoveNext();
+            Assert.AreEqual("food", entry.Current);
+            entry.MoveNext();
+            Assert.AreEqual("animal feed", entry.Current);
+            entry.MoveNext();
+            Assert.AreEqual("eclipse", entry.Current);
+            
+            meaning.MoveNext();
+
+            entry = meaning.Current.Pinyins.GetEnumerator();
+            entry.MoveNext();
+            Assert.AreEqual("sì", entry.Current);
+            
+            entry = meaning.Current.Translations.GetEnumerator();
+            entry.MoveNext();
+            Assert.AreEqual("to feed", entry.Current);
+        }
     }
 }
