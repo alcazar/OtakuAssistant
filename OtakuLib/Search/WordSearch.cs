@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace OtakuLib
 {
@@ -73,7 +73,7 @@ namespace OtakuLib
         public const int MaxSearchResultCount = 50;
         public const float MinRelevance = 0.75f;
 
-        public SearchQuery Query;
+        public string SearchText;
 
         public Task<SearchResult> SearchTask { get; private set; }
         public CancellationTokenSource SearchTaskCanceller { get; private set; }
@@ -83,8 +83,7 @@ namespace OtakuLib
 
         public WordSearch(string searchText, WordSearch waitForComplete = null)
         {
-            Query = new SearchQuery(searchText);
-
+            SearchText = searchText;
             WaitForComplete = waitForComplete;
             SearchTaskCanceller = new CancellationTokenSource();
             SearchTask = Task.Run((Func<SearchResult>)Search, SearchTaskCanceller.Token);
@@ -120,11 +119,23 @@ namespace OtakuLib
             }
 
             Stopwatch stopWatch = new Stopwatch();
+            Stopwatch initAndSpawnJobs = new Stopwatch();
+            Stopwatch jobSearch = new Stopwatch();
+            Stopwatch generateResults = new Stopwatch();
+
             stopWatch.Start();
+            initAndSpawnJobs.Start();
+
+            SearchQuery Query = new SearchQuery(SearchText);
+            if (Query.searchScope == SearchScope.NONE)
+            {
+                // shortcut if we have a blank entry (like only spaces)
+                return new SearchResult();
+            }
 
             WordDictionary dictionary = dictionaryLoader.Result;
 
-            const int wordSliceSize = 20000;
+            const int wordSliceSize = 10000;
             int wordSliceStart = 0;
             int wordSliceEnd = wordSliceSize;
             
@@ -138,8 +149,14 @@ namespace OtakuLib
                 wordSliceStart = wordSliceEnd;
                 wordSliceEnd += wordSliceSize;
             }
-            Task.WaitAll(SearchJobs, cancellationToken);
 
+            initAndSpawnJobs.Stop();
+
+            jobSearch.Start();
+            Task.WaitAll(SearchJobs, cancellationToken);
+            jobSearch.Stop();
+
+            generateResults.Start();
             List<SearchItem> internalSearchResults = new List<SearchItem>();
             foreach (Task<List<SearchItem>> searchJob in SearchJobs)
             {
@@ -159,10 +176,14 @@ namespace OtakuLib
 
             internalSearchResults.Clear();
             internalSearchResults.TrimExcess();
-
+            
+            generateResults.Stop();
             stopWatch.Stop();
             
             Debug.WriteLine("Search time: {0}ms", stopWatch.ElapsedMilliseconds);
+            Debug.WriteLine("   Init: {0}ms", initAndSpawnJobs.ElapsedMilliseconds);
+            Debug.WriteLine("   Search: {0}ms", jobSearch.ElapsedMilliseconds);
+            Debug.WriteLine("   Results: {0}ms", generateResults.ElapsedMilliseconds);
 
             return searchResults;
         }
@@ -187,18 +208,44 @@ namespace OtakuLib
             
             public List<SearchItem> Run()
             {
+                switch(Query.searchScope)
+                {
+                    case SearchScope.NONE:
+                        return null;
+                    case SearchScope.HANZI:
+                        return Run(SearchScope.HANZI);
+                    case SearchScope.PINYIN:
+                        return Run(SearchScope.PINYIN);
+                    case SearchScope.TRANSLATION:
+                        return Run(SearchScope.TRANSLATION);
+                    case SearchScope.HANZI | SearchScope.PINYIN:
+                        return Run(SearchScope.HANZI | SearchScope.PINYIN);
+                    case SearchScope.HANZI | SearchScope.TRANSLATION:
+                        return Run(SearchScope.HANZI | SearchScope.TRANSLATION);
+                    case SearchScope.PINYIN | SearchScope.TRANSLATION:
+                        return Run(SearchScope.PINYIN | SearchScope.TRANSLATION);
+                    case SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION:
+                        return Run(SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION);
+                    default:
+                        return null;
+                }
+            }
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public List<SearchItem> Run(SearchScope searchScope)
+            {
                 List<SearchItem> searchResults = new List<SearchItem>();
 
                 for (int i = JobSliceStart; i < JobSliceEnd; ++i)
                 {
-                    if ((i & 255) == 0)
+                    if ((i & 1023) == 0)
                     {
                         JobCancellationToken.ThrowIfCancellationRequested();
                     }
 
                     Word word = Dictionary[i];
                     
-                    float relevance = Query.SearchWord(word);
+                    float relevance = Query.SearchWord(word, searchScope);
                     if (relevance > MinRelevance)
                     {
                         searchResults.Add(new SearchItem(word, relevance));

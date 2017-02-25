@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Globalization;
+using System.Text;
 using System.Runtime.CompilerServices;
 
 namespace OtakuLib
@@ -47,11 +47,74 @@ namespace OtakuLib
 
         private ushort[] Backtrack;
 
-        public StringSearch(string str, int start, int length)
+        public StringSearch(string str, int start, int length, SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
         {
-            SearchStr = str;
-            SearchStart = start;
-            SearchLength = length;
+            if (searchFlags != SearchFlags.NONE)
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                
+                SearchActualLength = 0;
+                for (int i = 0; i < length; ++i)
+                {
+                    char c = str[i + start];
+                    if (c.IsHighSurrogate())
+                    {
+                        stringBuilder.Append(c);
+                        
+                        // low surrogate
+                        ++i;
+                        stringBuilder.Append(str[i + start]);
+                    
+                        // two characters marks as one
+                        ++SearchActualLength;
+                    }
+                    else if (c.IsDiacritic())
+                    {
+                        if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) == 0)
+                        {
+                            stringBuilder.Append(c);
+                        }
+                    }
+                    else
+                    {
+                        // normal character
+                        ++SearchActualLength;
+
+                        if (c.IsBlank())
+                        {
+                            if ((searchFlags & SearchFlags.IGNORE_NON_LETTER) == 0)
+                            {
+                                stringBuilder.Append(c);
+                            }
+                        }
+                        else
+                        {
+                            // precomposed characters
+                            if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) != 0)
+                            {
+                                c = RemoveDiacritic[c];
+                            }
+                            if ((searchFlags & SearchFlags.IGNORE_CASE) != 0 && 'A' <= c && c <= 'Z')
+                            {
+                                c = (char)(c - 'A' + 'a');
+                            }
+                            stringBuilder.Append(c);
+                        }
+                    }
+                }
+
+                SearchStr = stringBuilder.ToString();
+                SearchStart = 0;
+                SearchLength = SearchStr.Length;
+            }
+            else
+            {
+                SearchStr = str;
+                SearchStart = start;
+                SearchLength = length;
+                SearchActualLength = str.ActualLength();
+            }
+
 
             Backtrack = new ushort[length];
             for (int i = 0; i < length; ++i)
@@ -66,17 +129,15 @@ namespace OtakuLib
                     }
                 }
             }
-
-            SearchActualLength = str.ActualLength(start, length);
         }
 
-        public StringSearch(string str)
-            : this(str, 0, str.Length)
+        public StringSearch(string str, SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
+            : this(str, 0, str.Length, searchFlags)
         {
         }
 
-        public StringSearch(StringPointer str)
-            : this(WordDictionary.StringMemory, str.Start, str.Length)
+        public StringSearch(StringPointer str, SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
+            : this(WordDictionary.StringMemory, str.Start, str.Length, searchFlags)
         {
         }
 
@@ -155,10 +216,17 @@ namespace OtakuLib
                         do
                         {
                             ++result.Start;
-                            if (!str[result.Start].IsDiacritic())
+                            if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) != 0 && c.IsDiacritic())
                             {
-                                --oldIndex;
+                                continue;
                             }
+                            
+                            if ((searchFlags & SearchFlags.IGNORE_NON_LETTER) != 0 && c.IsBlank())
+                            {
+                                continue;
+                            }
+
+                            --oldIndex;
                         }
                         while (oldIndex > searchIndex);
                     }
@@ -189,6 +257,39 @@ namespace OtakuLib
             return SearchIn(WordDictionary.StringMemory, str.Start, str.Length, searchFlags);
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static char GetNextSearchIndex(string search, int searchStart, ref int searchIndex, int searchLength, SearchFlags searchFlags)
+        {
+            for (;searchIndex < searchLength; ++searchIndex)
+            {
+                char c = search[searchStart + searchIndex];
+
+                if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) != 0)
+                {
+                    if (c.IsDiacritic())
+                    {
+                        continue;
+                    }
+                    // check if precombined
+                    if (c < 0x200)
+                    {
+                        c = RemoveDiacritic[c];
+                    }
+                }
+                if ((searchFlags & SearchFlags.IGNORE_NON_LETTER) != 0 && c.IsBlank())
+                {
+                    continue;
+                }
+                if ((searchFlags & SearchFlags.IGNORE_CASE) != 0 && 'A' <= c && c <= 'Z')
+                {
+                    c = (char)(c - 'A' + 'a');
+                }
+
+                return c;
+            }
+            return '\0';
+        }
+        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Result Search(string search, int searchStart, int searchLength, string str, int start, int length,
@@ -201,6 +302,8 @@ namespace OtakuLib
 
             int carret = start;
             int end = carret + length;
+            
+            char c2 = GetNextSearchIndex(search, searchStart, ref searchIndex, searchLength, searchFlags);
 
             while (carret < end)
             {
@@ -228,9 +331,12 @@ namespace OtakuLib
                     c = (char)(c - 'A' + 'a');
                 }
 
-                if (search[searchStart + searchIndex] == c)
+                if (c == c2)
                 {
                     ++searchIndex;
+
+                    c2 = GetNextSearchIndex(search, searchStart, ref searchIndex, searchLength, searchFlags);
+
                     if (searchIndex == searchLength)
                     {
                         result.End = carret;
@@ -239,13 +345,25 @@ namespace OtakuLib
                 }
                 else
                 {
-                    searchIndex = 0;
+                    if (searchIndex > 0)
+                    {
+                        carret -= searchIndex;
+                        searchIndex = 0;
+                        c2 = GetNextSearchIndex(search, searchStart, ref searchIndex, searchLength, searchFlags);
+                    }
                     result.Start = carret;
                 }
             }
 
             result.End = result.Start;
             return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Result Search(string search, string str,
+            SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
+        {
+            return Search(search, 0, search.Length, str, 0, str.Length, searchFlags);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

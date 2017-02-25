@@ -7,25 +7,42 @@ namespace OtakuTest
     [TestClass]
     public class BasicTests
     {
+        public void TestStringSearch(string search, string str, int expectedStart, int expectedEnd, SearchFlags searchFlags = SearchFlags.NONE)
+        {
+            StringSearch.Result expected = new StringSearch.Result(expectedStart, expectedEnd);
+
+            StringSearch stringSearch = new StringSearch(search, searchFlags);
+            StringSearch.Result result1 = stringSearch.SearchIn(str, searchFlags);
+            StringSearch.Result result2 = StringSearch.Search(search, str, searchFlags);
+
+            if (expected.Found)
+            {
+                Assert.AreEqual(expected, result1);
+                Assert.AreEqual(expected, result2);
+            }
+            else
+            {
+                Assert.IsFalse(result1.Found);
+                Assert.IsFalse(result2.Found);
+            }
+        }
+
         [TestMethod]
         public void TestStringSearch()
         {
-            StringSearch search = new StringSearch("abcabcdef");
-
-            Assert.AreEqual(new StringSearch.Result(0, 9), search.SearchIn("abcabcdef"));
-            Assert.AreEqual(new StringSearch.Result(3, 12), search.SearchIn("abcabcabcdef"));
-            Assert.AreEqual(new StringSearch.Result(3, 12), search.SearchIn("abcabcabcdefdef"));
-            Assert.IsTrue(search.SearchIn("abcabcabcdef").Found);
-            Assert.IsFalse(search.SearchIn("abcabcadbcdef").Found);
-
-            search = new StringSearch("shanghai");
+            TestStringSearch("abcabcdef", "abcabcdef", 0, 9);
+            TestStringSearch("abcabcdef", "abcABCdef", 0, 0);
+            TestStringSearch("abcABCdef", "abcabcdef", 0, 0);
+            TestStringSearch("abcabcdef", "abcABCdef", 0, 9, SearchFlags.IGNORE_CASE);
+            TestStringSearch("abcABCdef", "abcabcdef", 0, 9, SearchFlags.IGNORE_CASE);
             
-            Assert.AreEqual(new StringSearch.Result(16, 24), search.SearchIn("Pudong Airport (Shanghai)"));
-            Assert.AreEqual(new StringSearch.Result(0, 9), search.SearchIn("shàng hǎi", SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER));
+            TestStringSearch("abcabcdef", "abcabcabcdef", 3, 12);
+            TestStringSearch("abcabcdef", "abcabcabcdefdef", 3, 12);
+            TestStringSearch("abcabcdef", "abcabcadbcdef", 0, 0);
 
-            search = new StringSearch("airport");
-
-            Assert.AreEqual(new StringSearch.Result(7, 14), search.SearchIn("Pudong Airport (Shanghai)"));
+            TestStringSearch("shanghai", "Pudong Airport (Shanghai)", 16, 24, SearchFlags.IGNORE_CASE);
+            TestStringSearch("shanghai", "shàng hǎi", 0, 9, SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER);
+            TestStringSearch("shàng hǎi", "shanghai", 0, 8, SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER);
         }
     }
 }

@@ -35,7 +35,7 @@ namespace OtakuAssistant
             this.InitializeComponent();
         }
 
-        private void ClearChildren()
+        private void ClearSearch()
         {
             WordListView.ItemsSource = new SearchResult();
         }
@@ -43,7 +43,7 @@ namespace OtakuAssistant
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             SearchBox.Text = (e.Parameter as string) ?? string.Empty;
-            ClearChildren();
+            ClearSearch();
             Search();
         }
 
@@ -72,10 +72,14 @@ namespace OtakuAssistant
         {
             string searchText = SearchBox.Text;
 
-            if (searchText != string.Empty)
-            {
-                StopSearch();
+            StopSearch();
 
+            if (searchText == string.Empty)
+            {
+                ClearSearch();
+            }
+            else
+            {
                 CurrentSearch = new WordSearch(searchText, CurrentSearch);
                 CurrentSearch.SearchTask.ContinueWith(UpdateSearchResults);
             }

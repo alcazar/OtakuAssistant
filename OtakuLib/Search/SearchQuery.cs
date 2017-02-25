@@ -6,9 +6,20 @@ using System.Runtime.CompilerServices;
 
 namespace OtakuLib
 {
+    [Flags]
+    public enum SearchScope
+    {
+        NONE = 0,
+        HANZI = 1,
+        PINYIN = 2,
+        TRANSLATION = 4,
+    }
+
     public class SearchQuery
     {
+
         public readonly string SearchText;
+        public readonly SearchScope searchScope;
 
         private string[] ChineseSearchWords = null;
         private StringSearch[] PinyinSearchWords = null;
@@ -18,7 +29,10 @@ namespace OtakuLib
         private int SearchScopeMax = 0;
         
         private static readonly char[] WordSeperators = {' '};
-        private const CompareOptions PinyinCompareOptions = CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols | CompareOptions.IgnoreNonSpace;
+
+        private const SearchFlags HanziSearchFlags = SearchFlags.NONE;
+        private const SearchFlags PinyinSearchFlags = SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER;
+        private const SearchFlags TranslationSearchFlags = SearchFlags.IGNORE_CASE;
 
         public SearchQuery(string searchText)
         {
@@ -30,7 +44,6 @@ namespace OtakuLib
 
             foreach (string searchWord in SearchText.Split(WordSeperators, StringSplitOptions.RemoveEmptyEntries))
             {
-                StringSearch stringSearch = new StringSearch(searchWord); 
                 if (searchWord.IsChinese())
                 {
                     chineseSearchWords.Add(searchWord);
@@ -39,18 +52,33 @@ namespace OtakuLib
                 {
                     if (searchWord.IsPinyin())
                     {
-                        pinyinSearchWords.Add(stringSearch);
+                        pinyinSearchWords.Add(new StringSearch(searchWord, PinyinSearchFlags));
                     }
-                    searchWords.Add(stringSearch);
+                    searchWords.Add(new StringSearch(searchWord, TranslationSearchFlags));
                 }
             }
-            SearchWords = searchWords.Count > 0 ? searchWords.ToArray() : null;
-            ChineseSearchWords = chineseSearchWords.Count > 0 ? chineseSearchWords.ToArray() : null;
-            PinyinSearchWords = pinyinSearchWords.Count > 0 ? pinyinSearchWords.ToArray() : null;
 
-            if (SearchWords != null)
+            searchScope = SearchScope.NONE;
+            if (chineseSearchWords.Count > 0)
             {
-                int totalCharCount = SearchWords.Aggregate(0, (int acc, StringSearch s) => { return acc + s.SearchLength; });
+                searchScope |= SearchScope.HANZI;
+                ChineseSearchWords = chineseSearchWords.ToArray();
+            }
+            if (pinyinSearchWords.Count > 0)
+            {
+                searchScope |= SearchScope.PINYIN;
+                PinyinSearchWords = pinyinSearchWords.ToArray();
+            }
+            if (searchWords.Count > 0)
+            {
+                searchScope |= SearchScope.TRANSLATION;
+                SearchWords = searchWords.ToArray();
+
+                int totalCharCount = 0;
+                foreach (StringSearch search in SearchWords)
+                {
+                    totalCharCount += search.SearchActualLength;
+                }
                 SearchScopeMin = totalCharCount / 2;
                 SearchScopeMax = totalCharCount * 3;
             }
@@ -73,7 +101,7 @@ namespace OtakuLib
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static float GetPinyinRelevance(StringPointer str, float strActualLength, StringSearch search)
         {
-            StringSearch.Result result = search.SearchIn(str, SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER);
+            StringSearch.Result result = search.SearchIn(str, PinyinSearchFlags);
             
             return result.Found ? GetRelevance(str, strActualLength, search.SearchActualLength, result.Start, result.End) : 0;
         }
@@ -97,7 +125,7 @@ namespace OtakuLib
                 StringSearch.Result result;
 
                 // check if the word (AB) is part of the search (ABC)
-                result = StringSearch.Search(hanzi, chineseSearchWord, 0, chineseSearchWord.Length, SearchFlags.NONE);
+                result = StringSearch.Search(hanzi, chineseSearchWord, 0, chineseSearchWord.Length, HanziSearchFlags);
 
                 if (result.Found)
                 {
@@ -106,7 +134,7 @@ namespace OtakuLib
                 }
 
                 // check if the word (AB) contains our search (A)
-                result = StringSearch.Search(chineseSearchWord, 0, chineseSearchWord.Length, hanzi);
+                result = StringSearch.Search(chineseSearchWord, 0, chineseSearchWord.Length, hanzi, HanziSearchFlags);
 
                 if (result.Found)
                 {
@@ -221,9 +249,22 @@ namespace OtakuLib
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float SearchWord(Word word)
+        public float SearchWord(Word word, SearchScope searchScope)
         {
-            return Math.Max(SearchHanzis(word.Hanzi, word.Traditional), Math.Max(SearchPinyins(word.Pinyins), SearchTranslations(word.Translations)));
+            float relevance = 0;
+            if ((searchScope & SearchScope.HANZI) != 0)
+            {
+                relevance = Math.Max(relevance, SearchHanzis(word.Hanzi, word.Traditional));
+            }
+            if ((searchScope & SearchScope.PINYIN) != 0)
+            {
+                relevance = Math.Max(relevance, SearchPinyins(word.Pinyins));
+            }
+            if ((searchScope & SearchScope.TRANSLATION) != 0)
+            {
+                relevance = Math.Max(relevance, SearchTranslations(word.Translations));
+            }
+            return relevance;
         }
     }
 }

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace OtakuLib
 {
@@ -163,23 +162,27 @@ namespace OtakuLib
         private readonly int ListLength;
 
         public int Count { get { return ListLength; } }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal StringList(int listStart, int listLength)
         {
             ListStart = listStart;
             ListLength = listLength;
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Enumerator GetEnumerator()
         {
             return new Enumerator(ListStart, ListLength);
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator<StringPointer> IEnumerable<StringPointer>.GetEnumerator()
         {
             return GetEnumerator();
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
@@ -189,7 +192,8 @@ namespace OtakuLib
         {
             private int ListCurrent;
             private int ListEnd;
-
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal Enumerator(int listStart, int listLength)
             {
                 ListCurrent = listStart - 1;
@@ -198,6 +202,7 @@ namespace OtakuLib
 
             public StringPointer Current
             {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
                     return WordDictionary.StringPointerMemory[ListCurrent];
@@ -206,12 +211,14 @@ namespace OtakuLib
 
             object IEnumerator.Current
             {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
                     return Current;
                 }
             }
-
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
                 ++ListCurrent;
