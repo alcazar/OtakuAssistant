@@ -15,12 +15,12 @@ namespace OtakuTest
     {
         public OtakuTest()
         {
-            if (DictionaryLoader.Current == null)
+            if (!WordDictionary.Loading.IsCompleted)
             {
                 Directory.SetCurrentDirectory("../../../OtakuAssistant");
                 new BinDictionaryLoader("Cedict_CN_ENG", new DotNetFS());
             }
-            Assert.IsTrue(DictionaryLoader.Current.LoadTask.Wait(1000));
+            Assert.IsTrue(WordDictionary.Loading.AsyncWaitHandle.WaitOne(5000));
         }
 
         private TestContext testContextInstance;
@@ -93,7 +93,7 @@ namespace OtakuTest
         /// </summary>
         public void TestStringIsChinese()
         {
-            foreach (Word word in DictionaryLoader.Current.LoadTask.Result)
+            foreach (Word word in WordDictionary.Words)
             {
                 TestStringIsChinese(word.Hanzi);
                 TestStringIsChinese(word.Traditional);
@@ -107,7 +107,7 @@ namespace OtakuTest
         [TestMethod]
         public void TestStringIsPinyin()
         {
-            foreach (Word word in DictionaryLoader.Current.LoadTask.Result)
+            foreach (Word word in WordDictionary.Words)
             {
                 // skip non chinese word as they may contain single letters like 3C with no pinyin
                 if (word.Hanzi.IsChinese())
@@ -136,23 +136,23 @@ namespace OtakuTest
         [TestMethod]
         public void TestPinyinAccents()
         {
-            Word word = DictionaryLoader.Current.LoadTask.Result["女"];
+            Word word = WordDictionary.Words["女"];
             Assert.AreEqual("nǚ, rǔ", word.ThumbPinyin);
 
-            word = DictionaryLoader.Current.LoadTask.Result["恧"];
+            word = WordDictionary.Words["恧"];
             Assert.AreEqual("nǜ", word.ThumbPinyin);
             
-            word = DictionaryLoader.Current.LoadTask.Result["三略"];
+            word = WordDictionary.Words["三略"];
             Assert.AreEqual("sān lüè", word.ThumbPinyin);
 
-            word = DictionaryLoader.Current.LoadTask.Result["晴"];
+            word = WordDictionary.Words["晴"];
             Assert.AreEqual("qíng", word.ThumbPinyin);
         }
 
         [TestMethod]
         public void TestMultiMeaningEntry()
         {
-            Word word = DictionaryLoader.Current.LoadTask.Result["食"];
+            Word word = WordDictionary.Words["食"];
 
             MeaningList.Enumerator meaning = word.Meanings.GetEnumerator();
             StringList.Enumerator entry;

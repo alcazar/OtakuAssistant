@@ -197,6 +197,13 @@ namespace OtakuLib
                     ++searchIndex;
                     if (searchIndex == SearchLength)
                     {
+                        if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) != 0)
+                        {
+                            while (carret < end && str[carret].IsDiacritic())
+                            {
+                                ++carret;
+                            }
+                        }
                         result.End = carret;
                         return result;
                     }
@@ -339,19 +346,26 @@ namespace OtakuLib
 
                     if (searchIndex == searchLength)
                     {
+                        if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) != 0)
+                        {
+                            while (carret < end && str[carret].IsDiacritic())
+                            {
+                                ++carret;
+                            }
+                        }
                         result.End = carret;
                         return result;
                     }
                 }
                 else
                 {
+                    ++result.Start;
+                    carret = result.Start;
                     if (searchIndex > 0)
                     {
-                        carret -= searchIndex;
                         searchIndex = 0;
                         c2 = GetNextSearchIndex(search, searchStart, ref searchIndex, searchLength, searchFlags);
                     }
-                    result.Start = carret;
                 }
             }
 

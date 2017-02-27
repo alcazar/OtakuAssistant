@@ -11,7 +11,7 @@
     MaxWidth="500">
     <Page.Resources>
         <DataTemplate x:Key="WordsItemTemplate" x:DataType="OtakuLib:SearchItem">
-            <RelativePanel x:Name="WordItem" Height="48" VirtualizingStackPanel.VirtualizationMode="Recycling">
+            <RelativePanel x:Name="WordItem" Height="48">
                 <TextBlock x:Name="Hanzi" Margin="10,0" Text="{x:Bind Hanzi, Converter={StaticResource SearchViewHanziWrapper}}" HorizontalAlignment="Center" FontSize="{x:Bind Hanzi, Converter={StaticResource SearchViewHanziSize}}" Width="100" RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignBottomWithPanel="True" TextAlignment="Center" VerticalAlignment="Center" MaxLines="2" Height="40" IsColorFontEnabled="False"/>
                 <TextBlock x:Name="traditional" Text="{x:Bind Traditional}" FontSize="16" VerticalAlignment="Bottom" Margin="0,0,5,0" RelativePanel.AlignRightWithPanel="True" HorizontalAlignment="Right" Height="22">
                     <TextBlock.Foreground>
@@ -39,13 +39,13 @@
 
     <RelativePanel>
         <TextBox x:Name="SearchBox" Height="4" Style="{StaticResource AutoSuggestBoxTextBoxStyle}" TextWrapping="Wrap" Text="" PlaceholderText="Search" d:LayoutOverrides="TopPosition, BottomPosition" TextChanged="searchBox_TextChanged" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignTopWithPanel="True" Margin="40"/>
-        <ListView x:Name="WordListView" RelativePanel.Below="SearchBox" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignBottomWithPanel="True" ItemClick="wordListView_ItemClick" IsItemClickEnabled="True" ItemsSource="{Binding Words}" ItemTemplate="{StaticResource WordsItemTemplate}">
+        <ListView x:Name="WordListView" RelativePanel.Below="SearchBox" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignBottomWithPanel="True" ItemClick="wordListView_ItemClick" IsItemClickEnabled="True" ItemsSource="{Binding Words}" ItemTemplate="{StaticResource WordsItemTemplate}" SelectionMode="None">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListViewItem">
-                                <ListViewItemPresenter Height="48" Width="{Binding ActualWidth, ElementName=WordListView}" />
+                                <ListViewItemPresenter Height="48"/>
                             </ControlTemplate>
                         </Setter.Value>
                     </Setter>

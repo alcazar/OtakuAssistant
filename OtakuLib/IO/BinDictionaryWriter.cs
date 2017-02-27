@@ -8,16 +8,16 @@ namespace OtakuLib
 {
     public class BinDictionaryWriter
     {
-        public static async Task WriteDictionary(string dictionaryName, WordDictionary dictionary, PortableFS portableFS)
+        public static async Task WriteDictionary(string dictionaryName, PortableFS portableFS)
         {
             const int sliceSize = 20000;
             int jobSliceStart = 0;
             int jobSliceEnd = sliceSize;
             
             List<Task<MemoryStream>> dictionaryWriteJobs = new List<Task<MemoryStream>>();
-            while (jobSliceStart < dictionary.Count)
+            while (jobSliceStart < WordDictionary.Words.Count)
             {
-                BinDictionaryWriteJob dictionaryWriteJob = new BinDictionaryWriteJob(dictionary, jobSliceStart, Math.Min(jobSliceEnd, dictionary.Count));
+                BinDictionaryWriteJob dictionaryWriteJob = new BinDictionaryWriteJob(jobSliceStart, Math.Min(jobSliceEnd, WordDictionary.Words.Count));
 
                 dictionaryWriteJobs.Add(Task.Run((Func<MemoryStream>)dictionaryWriteJob.WriteDictionaryPart));
 
@@ -56,13 +56,11 @@ namespace OtakuLib
 
         private class BinDictionaryWriteJob
         {
-            private WordDictionary Dictionary;
             private int JobSliceStart;
             private int JobSliceEnd;
 
-            public BinDictionaryWriteJob(WordDictionary dictionary, int jobSliceStart, int jobSliceEnd)
+            public BinDictionaryWriteJob(int jobSliceStart, int jobSliceEnd)
             {
-                Dictionary = dictionary;
                 JobSliceStart = jobSliceStart;
                 JobSliceEnd = jobSliceEnd;
             }
@@ -75,7 +73,7 @@ namespace OtakuLib
 
                 for (int w = JobSliceStart; w < JobSliceEnd; ++w)
                 {
-                    Word word = Dictionary[w];
+                    Word word = WordDictionary.Words[w];
 
                     writer.Write(word.Hanzi);
                     writer.Write(word.Traditional);

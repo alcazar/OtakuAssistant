@@ -19,9 +19,9 @@ namespace DictionaryBinarizer
 
             new XmlDictionaryLoader("Cedict_CN_ENG", fs, false);
 
-            DictionaryLoader.Current.LoadTask.Wait();
+            WordDictionary.Loading.AsyncWaitHandle.WaitOne();
 
-            BinDictionaryWriter.WriteDictionary("Cedict_CN_ENG", DictionaryLoader.Current.LoadTask.Result, fs).Wait();
+            BinDictionaryWriter.WriteDictionary("Cedict_CN_ENG", fs).Wait();
         }
     }
 }

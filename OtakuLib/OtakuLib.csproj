@@ -42,7 +42,7 @@
     <Compile Include="Dictionary\WordDictionary.cs" />
     <Compile Include="IO\BinDictionaryWriter.cs" />
     <Compile Include="IO\DictionaryLoader.cs" />
-    <Compile Include="Extensions.cs" />
+    <Compile Include="Misc\Extensions.cs" />
     <Compile Include="IO\PortableFS.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Search\SearchQuery.cs" />
@@ -50,6 +50,9 @@
     <Compile Include="Search\StringSearch.cs" />
     <Compile Include="Search\WordSearch.cs" />
     <Compile Include="IO\XmlDictionaryLoader.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -61,17 +64,15 @@
       <Private>True</Private>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
-  <Import Project="..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets" Condition="Exists('..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Scripty.MsBuild.0.6.0\build\Scripty.MsBuild.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Scripty.MsBuild.0.6.0\build\Scripty.MsBuild.targets'))" />
     <Error Condition="!Exists('..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets'))" />
   </Target>
+  <Import Project="..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets" Condition="Exists('..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

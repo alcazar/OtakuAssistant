@@ -73,186 +73,308 @@ namespace OtakuLib
         public const int MaxSearchResultCount = 50;
         public const float MinRelevance = 0.75f;
 
-        public string SearchText;
+        public string SearchText { get; private set; }
+        public SearchResult Results { get; private set; }
 
-        public Task<SearchResult> SearchTask { get; private set; }
-        public CancellationTokenSource SearchTaskCanceller { get; private set; }
+        public delegate void SearchCompleteHandlerDelegate(WordSearch search);
+        public SearchCompleteHandlerDelegate SearchCompleteHandler;
 
-        private WordSearch WaitForComplete = null;
-        private Task<List<SearchItem>>[] SearchJobs = null;
-
-        public WordSearch(string searchText, WordSearch waitForComplete = null)
+        public WordSearch(string searchText, SearchCompleteHandlerDelegate handler, bool clearQueue = true)
         {
             SearchText = searchText;
-            WaitForComplete = waitForComplete;
-            SearchTaskCanceller = new CancellationTokenSource();
-            SearchTask = Task.Run((Func<SearchResult>)Search, SearchTaskCanceller.Token);
+            SearchCompleteHandler = handler;
+
+            lock (SearchQueueMutex)
+            {
+                if (clearQueue)
+                {
+                    SearchQueue.Clear();
+                }
+                SearchQueue.Enqueue(this);
+            }
+                
+            if (MasterJobStartNotifier != null)
+            {
+                MasterJobStartNotifier.Set();
+            }
+            Debug.WriteLine("Search queued");
         }
 
-        public SearchResult Search()
+        private static Mutex SearchQueueMutex = new Mutex();
+        private static Queue<WordSearch> SearchQueue = new Queue<WordSearch>();
+        
+        private static SearchQuery CurrentQuery = null;
+
+        private static CancellationTokenSource SearchServiceStopTokenSource = null;
+        private static ManualResetEventSlim MasterJobStartNotifier = null;
+        private static SemaphoreSlim WorkerStartNotifier = null;
+        private static Barrier WorkerCompleteBarrier = null;
+
+        private static Task MasterJob = null;
+        private static SearchWorkJob[] WorkerJobs = null;
+
+        public static void StartSearchService(bool warmup = true)
         {
-            CancellationToken cancellationToken = SearchTaskCanceller.Token;
-
-            if (WaitForComplete != null)
+            if (MasterJob == null)
             {
-                try
+                if (warmup && SearchQueue.Count == 0)
                 {
-                    WaitForComplete.SearchTask.Wait(cancellationToken);
+                    new WordSearch("warmup", null, false);
                 }
-                catch (AggregateException) { }
 
-                if (WaitForComplete.SearchJobs != null)
+                WorkerJobs = new SearchWorkJob[4];
+
+                SearchServiceStopTokenSource = new CancellationTokenSource();
+                MasterJobStartNotifier = new ManualResetEventSlim(false, 1);
+                WorkerStartNotifier = new SemaphoreSlim(0, WorkerJobs.Length);
+                WorkerCompleteBarrier = new Barrier(WorkerJobs.Length + 1);
+
+                MasterJob = Task.Factory.StartNew(SearchMasterJob, TaskCreationOptions.None);
+
+                Debug.WriteLine("Started search service");
+            }
+        }
+
+        public static async Task WaitForSearchesToComplete()
+        {
+            int count;
+            do
+            {
+                count = SearchQueue.Count;
+                await Task.Delay(10);
+            } while (count > 0);
+        }
+
+        public static async Task StopSearchService()
+        {
+            if (MasterJob != null)
+            {
+                lock (SearchQueueMutex)
                 {
-                    try
-                    {
-                        Task.WaitAll(WaitForComplete.SearchJobs, cancellationToken);
-                    }
-                    catch (AggregateException) { }
+                    SearchQueue.Clear();
                 }
-                WaitForComplete = null;
-            }
 
-            Task<WordDictionary> dictionaryLoader = DictionaryLoader.Current.LoadTask;
-            if (!dictionaryLoader.IsCompleted)
-            {
-                dictionaryLoader.Wait(cancellationToken);
-            }
+                // new searches will be pushed to a new queue
+                // and will be handled when restarting the search service
+                SearchQueue = new Queue<WordSearch>();
 
-            Stopwatch stopWatch = new Stopwatch();
-            Stopwatch initAndSpawnJobs = new Stopwatch();
-            Stopwatch jobSearch = new Stopwatch();
-            Stopwatch generateResults = new Stopwatch();
-
-            stopWatch.Start();
-            initAndSpawnJobs.Start();
-
-            SearchQuery Query = new SearchQuery(SearchText);
-            if (Query.searchScope == SearchScope.NONE)
-            {
-                // shortcut if we have a blank entry (like only spaces)
-                return new SearchResult();
-            }
-
-            WordDictionary dictionary = dictionaryLoader.Result;
-
-            const int wordSliceSize = 10000;
-            int wordSliceStart = 0;
-            int wordSliceEnd = wordSliceSize;
-            
-            SearchJobs = new Task<List<SearchItem>>[(dictionary.Count + wordSliceSize - 1)/wordSliceSize];
-            for (int i = 0; i < SearchJobs.Length; ++i)
-            {
-                SearchWorkJob searchJob = new SearchWorkJob(Query, dictionary, wordSliceStart, Math.Min(wordSliceEnd, dictionary.Count), cancellationToken);
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
                 
-                SearchJobs[i] = Task.Run((Func<List<SearchItem>>)searchJob.Run, cancellationToken);
+                SearchServiceStopTokenSource.Cancel();
+                await MasterJob.ConfigureAwait(false);
+            
+                stopwatch.Stop();
+                Debug.WriteLine("Stopped search service in 0.{0:fffffff}s", stopwatch.Elapsed);
 
-                wordSliceStart = wordSliceEnd;
-                wordSliceEnd += wordSliceSize;
+                SearchServiceStopTokenSource.Dispose();
+                SearchServiceStopTokenSource = null;
+                MasterJobStartNotifier.Dispose();
+                MasterJobStartNotifier = null;
+                WorkerStartNotifier.Dispose();
+                WorkerStartNotifier = null;
+                WorkerCompleteBarrier.Dispose();
+                WorkerCompleteBarrier = null;
+            
+                MasterJob = null;
+                WorkerJobs = null;
             }
+        }
 
-            initAndSpawnJobs.Stop();
+        private static void SearchMasterJob()
+        {
+            Queue<WordSearch> searchQueue = SearchQueue;
 
-            jobSearch.Start();
-            Task.WaitAll(SearchJobs, cancellationToken);
-            jobSearch.Stop();
-
-            generateResults.Start();
-            List<SearchItem> internalSearchResults = new List<SearchItem>();
-            foreach (Task<List<SearchItem>> searchJob in SearchJobs)
+            int jobSliceSize = (WordDictionary.Words.Count + WorkerJobs.Length - 1)/WorkerJobs.Length;
+            int jobSliceStart = 0;
+            int jobSliceEnd = jobSliceSize;
+            for (int i = 0; i < WorkerJobs.Length; ++i)
             {
-                internalSearchResults.AddRange(searchJob.Result);
-                searchJob.Result.Clear();
-                searchJob.Result.TrimExcess();
+                WorkerJobs[i] = new SearchWorkJob(jobSliceStart, Math.Min(jobSliceEnd, WordDictionary.Words.Count));
+                WorkerJobs[i].task = Task.Factory.StartNew(WorkerJobs[i].Run, TaskCreationOptions.AttachedToParent);
+
+                jobSliceStart = jobSliceEnd;
+                jobSliceEnd += jobSliceSize;
             }
 
-            internalSearchResults.Sort();
-            
-            SearchResult searchResults = new SearchResult();
-            int len = Math.Min(internalSearchResults.Count, MaxSearchResultCount);
-            for (int i = 0; i < len; ++i)
+            try
             {
-                searchResults.Add(new OtakuLib.SearchItem(internalSearchResults[i].Word, internalSearchResults[i].Relevance));
+                while (true)
+                {
+                    int count = 0;
+                    lock (SearchQueueMutex)
+                    {
+                        count = searchQueue.Count;
+                    }
+
+                    if (count == 0)
+                    {
+                        // no job
+                        while (!MasterJobStartNotifier.Wait(1, SearchServiceStopTokenSource.Token));
+                    }
+                    else
+                    {
+                        // check if we have to quit now
+                        SearchServiceStopTokenSource.Token.ThrowIfCancellationRequested();
+                    }
+                    MasterJobStartNotifier.Reset();
+
+                    Debug.WriteLine("Search start");
+
+                    Stopwatch totalTime = new Stopwatch();
+                    Stopwatch initQuery = new Stopwatch();
+                    Stopwatch initJobs = new Stopwatch();
+                    Stopwatch jobSearch = new Stopwatch();
+                    Stopwatch generateResults = new Stopwatch();
+
+                    totalTime.Start();
+                
+                    initQuery.Start();
+
+                    WordSearch currentSearch;
+                    lock (SearchQueueMutex)
+                    {
+                        currentSearch = searchQueue.Dequeue();
+                    }
+
+                    CurrentQuery = new SearchQuery(currentSearch.SearchText);
+
+                    initQuery.Stop();
+
+                    if (CurrentQuery.searchScope != SearchScope.NONE)
+                    {
+                        initJobs.Start();
+                        
+                        WorkerStartNotifier.Release(WorkerJobs.Length);
+
+                        initJobs.Stop();
+
+                        jobSearch.Start();
+                        // wait for jobs to do the work
+                        WorkerCompleteBarrier.SignalAndWait(SearchServiceStopTokenSource.Token);
+                        jobSearch.Stop();
+
+                        generateResults.Start();
+
+                        List<SearchItem> internalSearchResults = new List<SearchItem>();
+                        foreach (SearchWorkJob workJob in WorkerJobs)
+                        {
+                            internalSearchResults.AddRange(workJob.Results);
+                        }
+
+                        internalSearchResults.Sort();
+            
+                        currentSearch.Results = new SearchResult();
+                        int len = Math.Min(internalSearchResults.Count, MaxSearchResultCount);
+                        for (int i = 0; i < len; ++i)
+                        {
+                            currentSearch.Results.Add(new OtakuLib.SearchItem(internalSearchResults[i].Word, internalSearchResults[i].Relevance));
+                        }
+            
+                        generateResults.Stop();
+                    }
+
+                    totalTime.Stop();
+            
+                    Debug.WriteLine("Search time for {1}: 0.{0:fffffff}s", totalTime.Elapsed, currentSearch.SearchText);
+                    Debug.WriteLine("   InitQuery: 0.{0:fffffff}s", initQuery.Elapsed);
+                    Debug.WriteLine("   InitJobs: 0.{0:fffffff}s", initJobs.Elapsed);
+                    Debug.WriteLine("   Search: 0.{0:fffffff}s", jobSearch.Elapsed);
+                    Debug.WriteLine("   Results: 0.{0:fffffff}s", generateResults.Elapsed);
+                    
+                    currentSearch.SearchCompleteHandler?.Invoke(currentSearch);
+
+                    CurrentQuery = null;
+                }
             }
-
-            internalSearchResults.Clear();
-            internalSearchResults.TrimExcess();
-            
-            generateResults.Stop();
-            stopWatch.Stop();
-            
-            Debug.WriteLine("Search time: {0}ms", stopWatch.ElapsedMilliseconds);
-            Debug.WriteLine("   Init: {0}ms", initAndSpawnJobs.ElapsedMilliseconds);
-            Debug.WriteLine("   Search: {0}ms", jobSearch.ElapsedMilliseconds);
-            Debug.WriteLine("   Results: {0}ms", generateResults.ElapsedMilliseconds);
-
-            return searchResults;
+            catch (OperationCanceledException)
+            {
+                // return nicely
+                Debug.WriteLine("Stopped master search thread");
+            }
         }
 
         private class SearchWorkJob
         {
-            private SearchQuery Query;
-            private WordDictionary Dictionary;
-            private int JobSliceStart;
-            private int JobSliceEnd;
+            public Task task;
+            public int JobSliceStart;
+            public int JobSliceEnd;
+            public List<SearchItem> Results = new List<SearchItem>();
 
-            private CancellationToken JobCancellationToken;
-
-            public SearchWorkJob(SearchQuery query, WordDictionary dictionary, int jobSliceStart, int jobSliceEnd, CancellationToken cancellationToken)
+            public SearchWorkJob(int jobSliceStart, int jobSliceEnd)
             {
-                Dictionary = dictionary;
                 JobSliceStart = jobSliceStart;
                 JobSliceEnd = jobSliceEnd;
-                JobCancellationToken = cancellationToken;
-                Query = query;
             }
             
-            public List<SearchItem> Run()
+            public void Run()
             {
-                switch(Query.searchScope)
+                try
                 {
-                    case SearchScope.NONE:
-                        return null;
-                    case SearchScope.HANZI:
-                        return Run(SearchScope.HANZI);
-                    case SearchScope.PINYIN:
-                        return Run(SearchScope.PINYIN);
-                    case SearchScope.TRANSLATION:
-                        return Run(SearchScope.TRANSLATION);
-                    case SearchScope.HANZI | SearchScope.PINYIN:
-                        return Run(SearchScope.HANZI | SearchScope.PINYIN);
-                    case SearchScope.HANZI | SearchScope.TRANSLATION:
-                        return Run(SearchScope.HANZI | SearchScope.TRANSLATION);
-                    case SearchScope.PINYIN | SearchScope.TRANSLATION:
-                        return Run(SearchScope.PINYIN | SearchScope.TRANSLATION);
-                    case SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION:
-                        return Run(SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION);
-                    default:
-                        return null;
+                    while (true)
+                    {
+                        while (!WorkerStartNotifier.Wait(1, SearchServiceStopTokenSource.Token));
+
+                        Results.Clear();
+
+                        switch(CurrentQuery.searchScope)
+                        {
+                            case SearchScope.HANZI:
+                                Run(SearchScope.HANZI);
+                                break;
+                            case SearchScope.PINYIN:
+                                Run(SearchScope.PINYIN);
+                                break;
+                            case SearchScope.TRANSLATION:
+                                Run(SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.HANZI | SearchScope.PINYIN:
+                                Run(SearchScope.HANZI | SearchScope.PINYIN);
+                                break;
+                            case SearchScope.HANZI | SearchScope.TRANSLATION:
+                                Run(SearchScope.HANZI | SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.PINYIN | SearchScope.TRANSLATION:
+                                Run(SearchScope.PINYIN | SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION:
+                                Run(SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.NONE:
+                            default:
+                                break;
+                        }
+
+                        WorkerCompleteBarrier.SignalAndWait(SearchServiceStopTokenSource.Token);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // return nicely
+                    Debug.WriteLine("Stopped search thread {0} - {1}", JobSliceStart, JobSliceEnd);
                 }
             }
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public List<SearchItem> Run(SearchScope searchScope)
+            public void Run(SearchScope searchScope)
             {
-                List<SearchItem> searchResults = new List<SearchItem>();
+                WordDictionary dictionary = WordDictionary.Words;
 
-                for (int i = JobSliceStart; i < JobSliceEnd; ++i)
+                SearchQuery query = CurrentQuery;
+
+                int start = JobSliceStart;
+                int end = JobSliceEnd;
+
+                for (int i = start; i < end; ++i)
                 {
-                    if ((i & 1023) == 0)
-                    {
-                        JobCancellationToken.ThrowIfCancellationRequested();
-                    }
+                    Word word = dictionary[i];
 
-                    Word word = Dictionary[i];
-                    
-                    float relevance = Query.SearchWord(word, searchScope);
+                    float relevance = query.SearchWord(word, searchScope);
                     if (relevance > MinRelevance)
                     {
-                        searchResults.Add(new SearchItem(word, relevance));
+                        Results.Add(new SearchItem(word, relevance));
                     }
                 }
-
-                return searchResults;
             }
         }
     }

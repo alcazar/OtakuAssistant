@@ -7,6 +7,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.UI.Core;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -18,16 +19,10 @@ using Windows.System.Threading;
 using Windows.ApplicationModel.Core;
 using OtakuLib;
 
-// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
-
 namespace OtakuAssistant
 {
-    /// <summary>
-    /// An empty page that can be used on its own or navigated to within a Frame.
-    /// </summary>
     public sealed partial class WordSearchPage : Page
     {
-        private WordSearch CurrentSearch = null;
         private SearchResult LastResults = null;
 
         public WordSearchPage()
@@ -51,20 +46,11 @@ namespace OtakuAssistant
         {
             if (e.NavigationMode != NavigationMode.Refresh)
             {
-                StopSearch();
                 if (e.NavigationMode != NavigationMode.Back)
                 {
-                    (Window.Current.Content as Frame).BackStack.RemoveAt((Window.Current.Content as Frame).BackStack.Count - 1);
-                    (Window.Current.Content as Frame).BackStack.Add(new PageStackEntry(GetType(), SearchBox.Text, null));
+                    Frame.BackStack.RemoveAt(Frame.BackStack.Count - 1);
+                    Frame.BackStack.Add(new PageStackEntry(GetType(), SearchBox.Text, null));
                 }
-            }
-        }
-
-        private void StopSearch()
-        {
-            if (CurrentSearch != null)
-            {
-                CurrentSearch.SearchTaskCanceller.Cancel();
             }
         }
 
@@ -72,30 +58,21 @@ namespace OtakuAssistant
         {
             string searchText = SearchBox.Text;
 
-            StopSearch();
-
             if (searchText == string.Empty)
             {
                 ClearSearch();
             }
             else
             {
-                CurrentSearch = new WordSearch(searchText, CurrentSearch);
-                CurrentSearch.SearchTask.ContinueWith(UpdateSearchResults);
+                WordSearch search = new WordSearch(searchText, UpdateSearchResults);
             }
         }
 
-        private void UpdateSearchResults(Task<SearchResult> task)
+        private void UpdateSearchResults(WordSearch search)
         {
-            if (!task.IsCanceled)
-            {
-                // backup the search results in case we throw a new search before UI update
-                LastResults = task.Result;
-                // we can safely mark there is no more search ongoing
-                CurrentSearch = null;
+            LastResults = search.Results;
 
-                IAsyncAction action = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, UpdateSearchResultsUI);
-            }
+            IAsyncAction action = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, UpdateSearchResultsUI);
         }
 
         private void UpdateSearchResultsUI()

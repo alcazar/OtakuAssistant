@@ -11,39 +11,46 @@ namespace OtakuTest
     {
         public SearchTest()
         {
-            if (DictionaryLoader.Current == null)
+            if (!WordDictionary.Loading.IsCompleted)
             {
                 Directory.SetCurrentDirectory("../../../OtakuAssistant");
                 new BinDictionaryLoader("Cedict_CN_ENG", new DotNetFS());
             }
-            Assert.IsTrue(DictionaryLoader.Current.LoadTask.Wait(1000));
+            Assert.IsTrue(WordDictionary.Loading.AsyncWaitHandle.WaitOne(5000));
+            WordSearch.StartSearchService(false);
+        }
+
+        [ClassCleanup]
+        public static void Cleanup()
+        {
+            WordSearch.StopSearchService().Wait(1000);
         }
 
         private void RunSearchTest(string searchText, bool AnyOrder, params string[] expectedSearchResults)
         {
-            WordSearch search = new WordSearch(searchText);
-            Assert.IsTrue(search.SearchTask.Wait(1000));
-
-            SearchResult searchResults = search.SearchTask.Result;
-            Assert.IsTrue(searchResults.Count >= expectedSearchResults.Length, string.Format("Search {0} did not return enough results", searchText));
+            WordSearch _search = new WordSearch(searchText, (WordSearch search) =>
+            {
+                SearchResult searchResults = search.Results;
+                Assert.IsTrue(searchResults.Count >= expectedSearchResults.Length, string.Format("Search {0} did not return enough results", searchText));
             
-            searchResults.RemoveRange(expectedSearchResults.Length, searchResults.Count - expectedSearchResults.Length);
+                searchResults.RemoveRange(expectedSearchResults.Length, searchResults.Count - expectedSearchResults.Length);
 
-            string error = string.Format("Improper search results for {0}", searchText);
-            if (AnyOrder)
-            {
-                foreach (string expectedSearchResult in expectedSearchResults)
+                string error = string.Format("Improper search results for {0}", searchText);
+                if (AnyOrder)
                 {
-                    Assert.IsTrue(searchResults.Any((SearchItem item) => { return item.Word.Hanzi == expectedSearchResult; }), error);
+                    foreach (string expectedSearchResult in expectedSearchResults)
+                    {
+                        Assert.IsTrue(searchResults.Any((SearchItem item) => { return item.Word.Hanzi == expectedSearchResult; }), error);
+                    }
                 }
-            }
-            else
-            {
-                for (int i = 0; i < expectedSearchResults.Length; ++i)
+                else
                 {
-                    Assert.AreEqual(expectedSearchResults[i], searchResults[i].Hanzi, error);
+                    for (int i = 0; i < expectedSearchResults.Length; ++i)
+                    {
+                        Assert.AreEqual(expectedSearchResults[i], searchResults[i].Hanzi, error);
+                    }
                 }
-            }
+            });
         }
 
         private void RunSearchTest(string searchText, params string[] searchResults)
@@ -63,6 +70,9 @@ namespace OtakuTest
             RunSearchTest("zhongguo", "中国");
             RunSearchTest("shanghai", true, "上海", "伤害");
             RunSearchTest("shanghai airport", true, "浦东机场", "虹桥机场");
+
+            // wait for all searches to complete
+            WordSearch.WaitForSearchesToComplete().Wait(10000);
         }
     }
 }

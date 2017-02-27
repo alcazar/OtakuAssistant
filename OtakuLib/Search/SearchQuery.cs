@@ -52,7 +52,7 @@ namespace OtakuLib
                 {
                     if (searchWord.IsPinyin())
                     {
-                        pinyinSearchWords.Add(new StringSearch(searchWord, PinyinSearchFlags));
+                        pinyinSearchWords.Add(new StringSearch(searchWord, SearchFlags.IGNORE_CASE | PinyinSearchFlags));
                     }
                     searchWords.Add(new StringSearch(searchWord, TranslationSearchFlags));
                 }
@@ -80,7 +80,7 @@ namespace OtakuLib
                     totalCharCount += search.SearchActualLength;
                 }
                 SearchScopeMin = totalCharCount / 2;
-                SearchScopeMax = totalCharCount * 3;
+                SearchScopeMax = totalCharCount * 5;
             }
         }
 
@@ -91,8 +91,8 @@ namespace OtakuLib
             bool wordEnd   = matchEnd == str.End || WordDictionary.StringMemory[matchEnd].IsBlank();
 
             float relevance = matchActualLength/strActualLength;
-            relevance += wordStart ? 0.35f : 0f;
-            relevance += wordEnd ? 0.2f : 0f;
+            relevance += wordStart ? 0.8f : 0f;
+            relevance += wordEnd ? 0.6f : 0f;
 
             return relevance;
         }
@@ -225,7 +225,7 @@ namespace OtakuLib
             foreach (StringPointer pinyin in pinyins)
             {
                 relevance = Math.Max(relevance, factor * SearchPinyin(pinyin));
-                factor *= 0.95f;
+                factor *= 0.995f;
             }
             return relevance;
         }
@@ -243,7 +243,7 @@ namespace OtakuLib
             foreach (StringPointer translation in translations)
             {
                 relevance = Math.Max(relevance, factor * SearchTranslation(translation));
-                factor *= 0.95f;
+                factor *= 0.995f;
             }
             return relevance;
         }
@@ -258,7 +258,7 @@ namespace OtakuLib
             }
             if ((searchScope & SearchScope.PINYIN) != 0)
             {
-                relevance = Math.Max(relevance, SearchPinyins(word.Pinyins));
+                relevance = Math.Max(relevance, SearchPinyins(word.Pinyins) * 0.9f);
             }
             if ((searchScope & SearchScope.TRANSLATION) != 0)
             {

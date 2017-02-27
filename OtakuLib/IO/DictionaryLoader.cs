@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,11 +9,9 @@ namespace OtakuLib
 {
     public abstract class DictionaryLoader
     {
-        public static DictionaryLoader Current { get; private set; }
-
         public string DictionaryName { get; private set; }
 
-        public Task<WordDictionary> LoadTask { get; private set; }
+        public Task LoadTask { get; private set; }
         public CancellationTokenSource LoadTaskCanceller { get; private set; }
 
         protected virtual bool AlreadySorted { get { return false; } }
@@ -32,16 +30,22 @@ namespace OtakuLib
                 LoadTaskCanceller.Cancel();
             }
             
+            WordDictionary.Loading.IsCompleted = false;
+            WordDictionary.Loading.DictionaryLoadedNotifier.Reset();
+            
             LoadTaskCanceller = new CancellationTokenSource();
             LoadTask = Task.Run(LoadDictionaryTask, LoadTaskCanceller.Token);
 
-            Current = this;
+            Debug.WriteLine("Loading dictionary " + dictionaryName);
         }
 
         protected abstract Task<List<DictionaryLoadJob>> GetDictionaryLoadJobs();
 
-        private async Task<WordDictionary> LoadDictionaryTask()
+        private async Task LoadDictionaryTask()
         {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             // spawn jobs
             List<DictionaryLoadJob> dictionaryLoadJobs = await GetDictionaryLoadJobs();
             List<Task> jobTasks = new List<Task>();
@@ -72,9 +76,12 @@ namespace OtakuLib
                 meaningMemoryBuilder.AddRange(dictionaryLoadJob.MeaningBuilder.MeaningMemory);
             }
 
-            WordDictionary.StringMemory = stringBuilder.StringBuilder.ToString();
-            WordDictionary.StringPointerMemory = stringBuilder.StringPointers.ToArray();
-            WordDictionary.MeaningMemory = meaningMemoryBuilder.ToArray();
+            WordDictionary.SetDictionary(
+                DictionaryName,
+                words,
+                stringBuilder.StringBuilder.ToString(),
+                stringBuilder.StringPointers.ToArray(),
+                meaningMemoryBuilder.ToArray());
 
             foreach (DictionaryLoadJob dictionaryLoadJob in dictionaryLoadJobs)
             {
@@ -126,13 +133,19 @@ namespace OtakuLib
                     tagBuilder.Clear();
                 }
                 
-                WordDictionary.StringMemory = stringBuilder.StringBuilder.ToString();
-                WordDictionary.StringPointerMemory = stringBuilder.StringPointers.ToArray();
-                WordDictionary.MeaningMemory = meaningBuilder.MeaningMemory.ToArray();
+                WordDictionary.SetDictionary(
+                    DictionaryName,
+                    words,
+                    stringBuilder.StringBuilder.ToString(),
+                    stringBuilder.StringPointers.ToArray(),
+                    meaningBuilder.MeaningMemory.ToArray());
             }
 
-            // create the dictionary
-            return new WordDictionary(words);
+            stopwatch.Stop();
+            Debug.WriteLine("Loaded dictionary {1} in 0.{0:fffffff}", stopwatch.Elapsed, DictionaryName);
+            
+            WordDictionary.Loading.IsCompleted = true;
+            WordDictionary.Loading.DictionaryLoadedNotifier.Set();
         }
 
         // helper class for dictionary loading job

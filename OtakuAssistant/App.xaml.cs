@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -37,6 +38,7 @@ namespace OtakuAssistant
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            this.Resuming += OnResuming;
             Current = this;
         }
 
@@ -53,12 +55,11 @@ namespace OtakuAssistant
                 this.DebugSettings.EnableFrameRateCounter = true;
             }
 #endif
+            LoadDictionary("Cedict_CN_ENG");
 
             Size desiredSize = new Size(405, 720);
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
             ApplicationView.PreferredLaunchViewSize = desiredSize;
-
-            new BinDictionaryLoader("Cedict_CN_ENG", new UWPFS());
 
             Frame rootFrame = Window.Current.Content as Frame;
 
@@ -102,6 +103,21 @@ namespace OtakuAssistant
                 Window.Current.Activate();
 
                 ApplicationView.GetForCurrentView().TryResizeView(desiredSize);
+            }
+        }
+
+        public async void LoadDictionary(string dictionary)
+        {
+
+            if (WordDictionary.CurrentDictionary != dictionary)
+            {
+                await Task.Run(() =>
+                {
+                    WordSearch.StopSearchService().Wait();
+                    new BinDictionaryLoader(dictionary, new UWPFS());
+                    WordDictionary.Loading.AsyncWaitHandle.WaitOne();
+                    WordSearch.StartSearchService();
+                });
             }
         }
         
@@ -156,8 +172,18 @@ namespace OtakuAssistant
         private void OnSuspending(object sender, SuspendingEventArgs e)
         {
             var deferral = e.SuspendingOperation.GetDeferral();
-            //TODO: Save application state and stop any background activity
+            
+            Debug.WriteLine("Suspending...");
+            WordSearch.StopSearchService().Wait(1000);
+            
+            Debug.WriteLine("Suspended...");
             deferral.Complete();
+        }
+
+        private void OnResuming(object sender, object e)
+        {
+            Debug.WriteLine("Resuming...");
+            WordSearch.StartSearchService();
         }
     }
 }

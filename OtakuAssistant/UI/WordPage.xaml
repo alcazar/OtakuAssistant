@@ -33,7 +33,7 @@
             <CommandBar.Content>
                 <Grid/>
             </CommandBar.Content>
-            <AppBarButton x:Name="FavoriteButton" Icon="OutlineStar" Label="Favorite" Click="FavoriteButton_Click"/>
+            <!--<AppBarButton x:Name="FavoriteButton" Icon="OutlineStar" Label="Favorite" Click="FavoriteButton_Click"/>-->
             <AppBarButton x:Name="SearchButton" Icon="Find" Label="Search" Click="SearchButton_Click"/>
             <AppBarButton x:Name="BackButton" Icon="Back" Label="Back" Click="BackButton_Click" IsEnabled="{Binding Frame.CanGoBack, ElementName=Page}"/>
             <AppBarButton x:Name="ForwardButton" Icon="Forward" Label="Forward" Click="ForwardButton_Click" IsEnabled="{Binding Frame.CanGoForward, ElementName=Page}"/>
