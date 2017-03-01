@@ -72,7 +72,7 @@ namespace OtakuLib
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsChinese(this char c)
+        public static bool IsChinese(uint c)
         {
             if (0x2E80 <= c && c <= 0x303F)
             {
@@ -94,7 +94,6 @@ namespace OtakuLib
             }
             else if (0x20000 <= c && c <= 0x2CEAF)
             {
-                // TODO: fixme, char is only 16bit. Handle surrogates
                 // CJK Unified Ideographs Extension B   20000 - 2A6DF
                 // CJK Unified Ideographs Extension C   2A700 – 2B73F
                 // CJK Unified Ideographs Extension D   2B740 – 2B81F
@@ -108,9 +107,23 @@ namespace OtakuLib
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsChinese(this string str)
         {
+            uint surrogate = 0;
             foreach (char c in str)
             {
-                if (!c.IsChinese())
+                if (c.IsHighSurrogate())
+                {
+                    surrogate = ((uint)c - 0xD800) << 10;
+                }
+                else if (c.IsLowSurrogate())
+                {
+                    surrogate |= ((uint)c - 0xDC00) & 0x3FF;
+                    surrogate += 0x10000;
+                    if (!IsChinese(surrogate))
+                    {
+                        return false;
+                    }
+                }
+                else if (!IsChinese((uint)c))
                 {
                     return false;
                 }
@@ -121,10 +134,24 @@ namespace OtakuLib
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsChinese(this StringPointer str)
         {
+            uint surrogate = 0;
             for (int i = str.Start; i < str.End; ++i)
             {
                 char c = WordDictionary.StringMemory[i];
-                if (!c.IsChinese())
+                if (c.IsHighSurrogate())
+                {
+                    surrogate = ((uint)c - 0xD800) << 10;
+                }
+                else if (c.IsLowSurrogate())
+                {
+                    surrogate |= ((uint)c - 0xDC00) & 0x3FF;
+                    surrogate += 0x10000;
+                    if (!IsChinese(surrogate))
+                    {
+                        return false;
+                    }
+                }
+                else if (!IsChinese((uint)c))
                 {
                     return false;
                 }

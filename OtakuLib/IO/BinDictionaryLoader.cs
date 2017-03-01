@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using OtakuLib.Builders;
 
 namespace OtakuLib
 {
@@ -85,7 +86,7 @@ namespace OtakuLib
                     
                     hanzi = reader.ReadString();
                     traditional = reader.ReadString();
-                    if (Version == 1)
+                    if (Version >= 1)
                     {
                         radicals = reader.ReadString();
                     }

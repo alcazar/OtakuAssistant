@@ -1,24 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using OtakuLib.Memory;
 
 namespace OtakuLib
 {
-    internal struct MeaningMemory
-    {
-        internal readonly byte PinyinCount;
-        internal readonly byte TranslationCount;
-
-        internal MeaningMemory(StringPointerBuilder pinyins, StringPointerBuilder translations)
-        {
-            PinyinCount = (byte)pinyins.StringPointers.Count;
-            TranslationCount = (byte)translations.StringPointers.Count;
-        }
-    }
-
     public struct Meaning
     {
         private readonly int PinyinListStart;
@@ -33,40 +19,6 @@ namespace OtakuLib
             PinyinListStart = pinyinListStart;
             TranslationListStart = translationListStart;
             MeaningMemory = meaningMemory;
-        }
-    }
-
-    internal struct MeaningListMemory
-    {
-        internal int MeaningStart;
-        internal readonly byte MeaningLength;
-
-        internal MeaningListMemory(MeaningListBuilder builder)
-        {
-            MeaningStart = builder.MeaningStart;
-            MeaningLength = (byte)(builder.MeaningMemory.Count - builder.MeaningStart);
-        }
-    }
-
-    internal class MeaningListBuilder
-    {
-        internal StringPointerBuilder Pinyins = new StringPointerBuilder();
-        internal StringPointerBuilder Translations = new StringPointerBuilder();
-        internal List<MeaningMemory> MeaningMemory = new List<MeaningMemory>();
-        internal int MeaningStart = 0;
-
-        internal void Clear()
-        {
-            Pinyins.Clear();
-            Translations.Clear();
-            MeaningStart = MeaningMemory.Count;
-        }
-
-        internal void Add(StringPointerBuilder pinyins, StringPointerBuilder translations)
-        {
-            Pinyins.Append(pinyins);
-            Translations.Append(translations);
-            MeaningMemory.Add(new MeaningMemory(pinyins, translations));
         }
     }
 

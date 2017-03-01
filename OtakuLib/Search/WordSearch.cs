@@ -93,9 +93,9 @@ namespace OtakuLib
                 SearchQueue.Enqueue(this);
             }
                 
-            if (MasterJobStartNotifier != null)
+            if (MasterStartNotifier != null)
             {
-                MasterJobStartNotifier.Set();
+                MasterStartNotifier.Set();
             }
             Debug.WriteLine("Search queued");
         }
@@ -106,9 +106,10 @@ namespace OtakuLib
         private static SearchQuery CurrentQuery = null;
 
         private static CancellationTokenSource SearchServiceStopTokenSource = null;
-        private static ManualResetEventSlim MasterJobStartNotifier = null;
+        private static ManualResetEventSlim MasterStartNotifier = null;
         private static SemaphoreSlim WorkerStartNotifier = null;
-        private static Barrier WorkerCompleteBarrier = null;
+        private static SemaphoreSlim WorkerCompleteNotifier = null;
+        private static SemaphoreSlim MasterCompleteNotifier = null;
 
         private static Task MasterJob = null;
         private static SearchWorkJob[] WorkerJobs = null;
@@ -125,11 +126,12 @@ namespace OtakuLib
                 WorkerJobs = new SearchWorkJob[4];
 
                 SearchServiceStopTokenSource = new CancellationTokenSource();
-                MasterJobStartNotifier = new ManualResetEventSlim(false, 1);
+                MasterStartNotifier = new ManualResetEventSlim(false, 1);
                 WorkerStartNotifier = new SemaphoreSlim(0, WorkerJobs.Length);
-                WorkerCompleteBarrier = new Barrier(WorkerJobs.Length + 1);
+                WorkerCompleteNotifier = new SemaphoreSlim(0, WorkerJobs.Length);
+                MasterCompleteNotifier = new SemaphoreSlim(0, WorkerJobs.Length);
 
-                MasterJob = Task.Factory.StartNew(SearchMasterJob, TaskCreationOptions.None);
+                MasterJob = Task.Factory.StartNew(SearchMasterJob, TaskCreationOptions.LongRunning);
 
                 Debug.WriteLine("Started search service");
             }
@@ -169,12 +171,14 @@ namespace OtakuLib
 
                 SearchServiceStopTokenSource.Dispose();
                 SearchServiceStopTokenSource = null;
-                MasterJobStartNotifier.Dispose();
-                MasterJobStartNotifier = null;
+                MasterStartNotifier.Dispose();
+                MasterStartNotifier = null;
                 WorkerStartNotifier.Dispose();
                 WorkerStartNotifier = null;
-                WorkerCompleteBarrier.Dispose();
-                WorkerCompleteBarrier = null;
+                WorkerCompleteNotifier.Dispose();
+                WorkerCompleteNotifier = null;
+                MasterCompleteNotifier.Dispose();
+                MasterCompleteNotifier = null;
             
                 MasterJob = null;
                 WorkerJobs = null;
@@ -191,7 +195,7 @@ namespace OtakuLib
             for (int i = 0; i < WorkerJobs.Length; ++i)
             {
                 WorkerJobs[i] = new SearchWorkJob(jobSliceStart, Math.Min(jobSliceEnd, WordDictionary.Words.Count));
-                WorkerJobs[i].task = Task.Factory.StartNew(WorkerJobs[i].Run, TaskCreationOptions.AttachedToParent);
+                WorkerJobs[i].task = Task.Factory.StartNew(WorkerJobs[i].Run, TaskCreationOptions.AttachedToParent | TaskCreationOptions.LongRunning);
 
                 jobSliceStart = jobSliceEnd;
                 jobSliceEnd += jobSliceSize;
@@ -210,20 +214,19 @@ namespace OtakuLib
                     if (count == 0)
                     {
                         // no job
-                        while (!MasterJobStartNotifier.Wait(1, SearchServiceStopTokenSource.Token));
+                        while (!MasterStartNotifier.Wait(1, SearchServiceStopTokenSource.Token));
                     }
                     else
                     {
                         // check if we have to quit now
                         SearchServiceStopTokenSource.Token.ThrowIfCancellationRequested();
                     }
-                    MasterJobStartNotifier.Reset();
+                    MasterStartNotifier.Reset();
 
                     Debug.WriteLine("Search start");
 
                     Stopwatch totalTime = new Stopwatch();
                     Stopwatch initQuery = new Stopwatch();
-                    Stopwatch initJobs = new Stopwatch();
                     Stopwatch jobSearch = new Stopwatch();
                     Stopwatch generateResults = new Stopwatch();
 
@@ -243,15 +246,20 @@ namespace OtakuLib
 
                     if (CurrentQuery.searchScope != SearchScope.NONE)
                     {
-                        initJobs.Start();
+                        jobSearch.Start();
                         
+                        // kick in the jobs
                         WorkerStartNotifier.Release(WorkerJobs.Length);
 
-                        initJobs.Stop();
-
-                        jobSearch.Start();
                         // wait for jobs to do the work
-                        WorkerCompleteBarrier.SignalAndWait(SearchServiceStopTokenSource.Token);
+                        for (int i = 0; i < WorkerJobs.Length; ++i)
+                        {
+                            while (!WorkerCompleteNotifier.Wait(1, SearchServiceStopTokenSource.Token));
+                        }
+
+                        // notify all the jobs that everything is complete
+                        MasterCompleteNotifier.Release(WorkerJobs.Length);
+
                         jobSearch.Stop();
 
                         generateResults.Start();
@@ -278,7 +286,6 @@ namespace OtakuLib
             
                     Debug.WriteLine("Search time for {1}: 0.{0:fffffff}s", totalTime.Elapsed, currentSearch.SearchText);
                     Debug.WriteLine("   InitQuery: 0.{0:fffffff}s", initQuery.Elapsed);
-                    Debug.WriteLine("   InitJobs: 0.{0:fffffff}s", initJobs.Elapsed);
                     Debug.WriteLine("   Search: 0.{0:fffffff}s", jobSearch.Elapsed);
                     Debug.WriteLine("   Results: 0.{0:fffffff}s", generateResults.Elapsed);
                     
@@ -309,11 +316,16 @@ namespace OtakuLib
             
             public void Run()
             {
+                Stopwatch timer = new Stopwatch();
+
                 try
                 {
                     while (true)
                     {
+                        // wait for the master to kick in the job
                         while (!WorkerStartNotifier.Wait(1, SearchServiceStopTokenSource.Token));
+
+                        timer.Restart();
 
                         Results.Clear();
 
@@ -345,7 +357,15 @@ namespace OtakuLib
                                 break;
                         }
 
-                        WorkerCompleteBarrier.SignalAndWait(SearchServiceStopTokenSource.Token);
+                        timer.Stop();
+                        
+                        // we finished our work, let the master know about it
+                        WorkerCompleteNotifier.Release();
+
+                        Debug.WriteLine("Job completed search in 0.{0:fffffff}s", timer.Elapsed);
+
+                        // wait for the master to acknowledge that all jobs have finished
+                        while (!MasterCompleteNotifier.Wait(1, SearchServiceStopTokenSource.Token));
                     }
                 }
                 catch (OperationCanceledException)

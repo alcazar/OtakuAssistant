@@ -36,7 +36,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Dictionary\Builders.cs" />
     <Compile Include="Dictionary\Meaning.cs" />
+    <Compile Include="Dictionary\Memory.cs" />
     <Compile Include="Dictionary\StringPointer.cs" />
     <Compile Include="IO\BinDictionaryLoader.cs" />
     <Compile Include="Dictionary\WordDictionary.cs" />

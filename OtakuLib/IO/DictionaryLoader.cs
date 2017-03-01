@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using OtakuLib.Builders;
+using OtakuLib.Memory;
 
 namespace OtakuLib
 {

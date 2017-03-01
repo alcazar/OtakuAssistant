@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 namespace OtakuLib
 {
     [Flags]
-    public enum SearchScope
+    internal enum SearchScope
     {
         NONE = 0,
         HANZI = 1,
@@ -15,7 +15,7 @@ namespace OtakuLib
         TRANSLATION = 4,
     }
 
-    public class SearchQuery
+    internal class SearchQuery
     {
 
         public readonly string SearchText;
