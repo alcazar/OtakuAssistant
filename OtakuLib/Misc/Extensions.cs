@@ -16,7 +16,10 @@ namespace OtakuLib
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsBlank(this char c)
         {
-            return c <= '.';
+            return c <= 0x002f
+                || (c >= 0x003a && c <= 0x003f)
+                || (c >= 0xff00 && c <= 0xff0f)
+                || (c >= 0xff1a && c <= 0xff1f);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

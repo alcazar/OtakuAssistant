@@ -36,7 +36,10 @@ namespace OtakuLib
 
         public SearchQuery(string searchText)
         {
-            SearchText = searchText.Replace("'", "");
+            SearchText = searchText;
+
+            int actualLength;
+            SearchText = StringSearch.PreprocessStr(SearchText, 0, SearchText.Length, SearchFlags.IGNORE_CASE | SearchFlags.IGNORE_DIACRITICS, out actualLength);
             
             List<string> chineseSearchWords = new List<string>();
             List<StringSearch> pinyinSearchWords = new List<StringSearch>();
@@ -44,17 +47,19 @@ namespace OtakuLib
 
             foreach (string searchWord in SearchText.Split(WordSeperators, StringSplitOptions.RemoveEmptyEntries))
             {
-                if (searchWord.IsChinese())
+                string processedSearchWord = StringSearch.PreprocessStr(searchWord, 0, searchWord.Length, SearchFlags.IGNORE_NON_LETTER, out actualLength);
+
+                if (processedSearchWord.IsChinese())
                 {
-                    chineseSearchWords.Add(searchWord);
+                    chineseSearchWords.Add(processedSearchWord);
                 }
                 else
                 {
-                    if (searchWord.IsPinyin())
+                    if (processedSearchWord.IsPinyin())
                     {
-                        pinyinSearchWords.Add(new StringSearch(searchWord, SearchFlags.IGNORE_CASE | PinyinSearchFlags));
+                        pinyinSearchWords.Add(new StringSearch(processedSearchWord, SearchFlags.NONE));
                     }
-                    searchWords.Add(new StringSearch(searchWord, TranslationSearchFlags));
+                    searchWords.Add(new StringSearch(processedSearchWord, SearchFlags.NONE));
                 }
             }
 

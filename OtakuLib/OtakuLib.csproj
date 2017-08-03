@@ -59,7 +59,6 @@
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\portable-net45+wp80+win8+wpa81+dnxcore50\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="UnicodeNormalization, Version=1.0.3.0, Culture=neutral, PublicKeyToken=262257e9601f4ef8, processorArchitecture=MSIL">
       <HintPath>..\packages\UnicodeNormalization.1.0.4\lib\portable-net40+sl5+wp80+win8+wpa81\UnicodeNormalization.dll</HintPath>
@@ -72,9 +71,8 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Scripty.MsBuild.0.6.0\build\Scripty.MsBuild.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Scripty.MsBuild.0.6.0\build\Scripty.MsBuild.targets'))" />
-    <Error Condition="!Exists('..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets'))" />
   </Target>
-  <Import Project="..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets" Condition="Exists('..\packages\Scripty.MsBuild.0.4.0\build\Scripty.MsBuild.targets')" />
+  <Import Project="..\packages\Scripty.MsBuild.0.6.0\build\Scripty.MsBuild.targets" Condition="Exists('..\packages\Scripty.MsBuild.0.6.0\build\Scripty.MsBuild.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

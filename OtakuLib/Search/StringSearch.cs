@@ -47,63 +47,71 @@ namespace OtakuLib
 
         private ushort[] Backtrack;
 
-        public StringSearch(string str, int start, int length, SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
+        public static string PreprocessStr(string str, int start, int length, SearchFlags searchFlags, out int actualLength)
         {
-            if (searchFlags != SearchFlags.NONE)
+            StringBuilder stringBuilder = new StringBuilder();
+
+            actualLength = 0;
+            for (int i = 0; i < length; ++i)
             {
-                StringBuilder stringBuilder = new StringBuilder();
-                
-                SearchActualLength = 0;
-                for (int i = 0; i < length; ++i)
+                char c = str[i + start];
+                if (c.IsHighSurrogate())
                 {
-                    char c = str[i + start];
-                    if (c.IsHighSurrogate())
+                    stringBuilder.Append(c);
+
+                    // low surrogate
+                    ++i;
+                    stringBuilder.Append(str[i + start]);
+
+                    // two characters marks as one
+                    ++actualLength;
+                }
+                else if (c.IsDiacritic())
+                {
+                    if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) == 0)
                     {
                         stringBuilder.Append(c);
-                        
-                        // low surrogate
-                        ++i;
-                        stringBuilder.Append(str[i + start]);
-                    
-                        // two characters marks as one
-                        ++SearchActualLength;
                     }
-                    else if (c.IsDiacritic())
+                }
+                else
+                {
+                    // normal character
+                    ++actualLength;
+
+                    if (c.IsBlank())
                     {
-                        if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) == 0)
+                        if ((searchFlags & SearchFlags.IGNORE_NON_LETTER) == 0)
                         {
                             stringBuilder.Append(c);
                         }
                     }
                     else
                     {
-                        // normal character
-                        ++SearchActualLength;
-
-                        if (c.IsBlank())
+                        // precomposed characters
+                        if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) != 0)
                         {
-                            if ((searchFlags & SearchFlags.IGNORE_NON_LETTER) == 0)
-                            {
-                                stringBuilder.Append(c);
-                            }
-                        }
-                        else
-                        {
-                            // precomposed characters
-                            if ((searchFlags & SearchFlags.IGNORE_DIACRITICS) != 0)
+                            if (c < RemoveDiacritic.Length)
                             {
                                 c = RemoveDiacritic[c];
                             }
-                            if ((searchFlags & SearchFlags.IGNORE_CASE) != 0 && 'A' <= c && c <= 'Z')
-                            {
-                                c = (char)(c - 'A' + 'a');
-                            }
-                            stringBuilder.Append(c);
                         }
+                        if ((searchFlags & SearchFlags.IGNORE_CASE) != 0 && 'A' <= c && c <= 'Z')
+                        {
+                            c = (char)(c - 'A' + 'a');
+                        }
+                        stringBuilder.Append(c);
                     }
                 }
+            }
 
-                SearchStr = stringBuilder.ToString();
+            return stringBuilder.ToString();
+        }
+
+        public StringSearch(string str, int start, int length, int actualLength, SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
+        {
+            if (searchFlags != SearchFlags.NONE)
+            {
+                SearchStr = PreprocessStr(str, start, length, searchFlags, out actualLength);
                 SearchStart = 0;
                 SearchLength = SearchStr.Length;
             }
@@ -112,9 +120,13 @@ namespace OtakuLib
                 SearchStr = str;
                 SearchStart = start;
                 SearchLength = length;
-                SearchActualLength = str.ActualLength();
-            }
 
+                if (actualLength < 0)
+                {
+                    actualLength = str.ActualLength(start, length);
+                }
+            }
+            SearchActualLength = actualLength;
 
             Backtrack = new ushort[length];
             for (int i = 0; i < length; ++i)
@@ -132,12 +144,12 @@ namespace OtakuLib
         }
 
         public StringSearch(string str, SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
-            : this(str, 0, str.Length, searchFlags)
+            : this(str, 0, str.Length, -1, searchFlags)
         {
         }
 
         public StringSearch(StringPointer str, SearchFlags searchFlags = SearchFlags.IGNORE_CASE)
-            : this(WordDictionary.StringMemory, str.Start, str.Length, searchFlags)
+            : this(WordDictionary.StringMemory, str.Start, str.Length, str.ActualLength, searchFlags)
         {
         }
 

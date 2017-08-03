@@ -68,8 +68,10 @@ namespace OtakuTest
             RunSearchTest("eat", true, "吃", "哺", "啖", "用饭", "食");
             RunSearchTest("中国人", "中国人", "中", "中国", "国", "国人", "人");
             RunSearchTest("zhongguo", "中国");
+            RunSearchTest("zhòngguo", "中国");
             RunSearchTest("shanghai", true, "上海", "伤害");
             RunSearchTest("shanghai airport", true, "浦东机场", "虹桥机场");
+            RunSearchTest("你，，好，吗？？？", "你", "你好", "好", "吗");
 
             // wait for all searches to complete
             WordSearch.WaitForSearchesToComplete().Wait(10000);
