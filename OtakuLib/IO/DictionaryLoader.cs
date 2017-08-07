@@ -103,6 +103,8 @@ namespace OtakuLib
                 StringPointerBuilder translationBuilder = new StringPointerBuilder();
                 StringPointerBuilder tagBuilder = new StringPointerBuilder();
 
+                List<Word> newWords = new List<Word>();
+
                 foreach (Word word in words)
                 {
                     foreach (Meaning meaning in word.Meanings)
@@ -128,8 +130,8 @@ namespace OtakuLib
                         tagBuilder.Add(tag);
                     }
 
-                    new Word(stringBuilder,
-                        word.Hanzi, word.Traditional, word.ThumbPinyin, word.ThumbTranslation, word.Radicals, word.Link, meaningBuilder, tagBuilder);
+                    newWords.Add(new Word(stringBuilder,
+                        word.Hanzi, word.Traditional, word.ThumbPinyin, word.ThumbTranslation, word.Radicals, word.Link, meaningBuilder, tagBuilder));
 
                     meaningBuilder.Clear();
                     tagBuilder.Clear();
@@ -137,7 +139,7 @@ namespace OtakuLib
                 
                 WordDictionary.SetDictionary(
                     DictionaryName,
-                    words,
+                    newWords,
                     stringBuilder.StringBuilder.ToString(),
                     stringBuilder.StringPointers.ToArray(),
                     meaningBuilder.MeaningMemory.ToArray());
