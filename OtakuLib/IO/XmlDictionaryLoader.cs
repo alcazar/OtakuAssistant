@@ -156,9 +156,15 @@ namespace OtakuLib
                         thumbTranslation = BuildThumb(thumbTranslationBuilder);
                     }
 
+                    ulong pinyinMask = 0;
+                    foreach (string pinyin in thumbPinyinBuilder)
+                    {
+                        pinyinMask |= pinyin.LetterMask();
+                    }
+
                     Words.Add(new Word(StringBuilder,
                         hanzi, traditional, thumbPinyin, thumbTranslation, radicals, link,
-                        MeaningBuilder, tagBuilder));
+                        MeaningBuilder, tagBuilder, pinyinMask));
             
                     tagBuilder.Clear();
                     MeaningBuilder.Clear();

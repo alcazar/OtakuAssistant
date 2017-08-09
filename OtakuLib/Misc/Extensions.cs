@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
@@ -18,10 +18,57 @@ namespace OtakuLib
         {
             return c <= 0x002f
                 || (c >= 0x003a && c <= 0x003f)
+                || (c >= 0x005b && c <= 0x0060)
+                || (c >= 0x007b && c <= 0x007f)
                 || (c >= 0xff00 && c <= 0xff0f)
                 || (c >= 0xff1a && c <= 0xff1f);
         }
-        
+
+        public static void SplitWords(this string s, int start, int length, List<StringPointer> words)
+        {
+            int end = start + length;
+            while (start < end)
+            {
+                while (start < end && s[start].IsBlank())
+                {
+                    ++start;
+                }
+
+                int wordEnd = start;
+                while (wordEnd < end && !s[wordEnd].IsBlank())
+                {
+                    ++wordEnd;
+                }
+
+                if (wordEnd != start)
+                {
+                    words.Add(new StringPointer(start, (ushort)(wordEnd - start), (ushort)s.ActualLength(start, wordEnd - start)));
+                    start = wordEnd;
+                }
+            }
+        }
+
+        public static ulong LetterMask(this string s)
+        {
+            ulong mask = 0;
+            foreach (char c in s)
+            {
+                if (c >= '0' && c <= '9')
+                {
+                    mask |= 1UL << (c - '0');
+                }
+                else if (c >= 'a' && c <= 'z')
+                {
+                    mask |= 1UL << (c - 'a' + 10);
+                }
+                else
+                {
+                    mask |= 1UL << 63;
+                }
+            }
+            return mask;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsHighSurrogate(this char c)
         {

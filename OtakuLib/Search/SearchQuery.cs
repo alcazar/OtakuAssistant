@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -17,9 +17,10 @@ namespace OtakuLib
 
     internal class SearchQuery
     {
-
         public readonly string SearchText;
         public readonly SearchScope searchScope;
+
+        public readonly int[] SearchInWordsMask = null;
 
         private string[] ChineseSearchWords = null;
         private StringSearch[] PinyinSearchWords = null;
@@ -33,6 +34,8 @@ namespace OtakuLib
         private const SearchFlags HanziSearchFlags = SearchFlags.NONE;
         private const SearchFlags PinyinSearchFlags = SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER;
         private const SearchFlags TranslationSearchFlags = SearchFlags.IGNORE_CASE;
+
+        private ulong PinyinMask = 0;
 
         public SearchQuery(string searchText)
         {
@@ -58,8 +61,12 @@ namespace OtakuLib
                     if (processedSearchWord.IsPinyin())
                     {
                         pinyinSearchWords.Add(new StringSearch(processedSearchWord, SearchFlags.NONE));
+                        PinyinMask |= processedSearchWord.LetterMask();
                     }
-                    searchWords.Add(new StringSearch(processedSearchWord, SearchFlags.NONE));
+                    if (processedSearchWord.Length >= 2)
+                    {
+                        searchWords.Add(new StringSearch(processedSearchWord, SearchFlags.NONE));
+                    }
                 }
             }
 
@@ -86,6 +93,28 @@ namespace OtakuLib
                 }
                 SearchScopeMin = totalCharCount / 2;
                 SearchScopeMax = totalCharCount * 5;
+
+                SearchInWordsMask = new int[(WordDictionary.Words.Count + 31) / 32];
+
+                foreach (StringSearch search in searchWords)
+                {
+                    ulong letterMask = search.SearchStr.LetterMask();
+                    int indexedWordMatchStart = 0;
+                    foreach (IndexedWord indexedWord in WordDictionary.IndexedWords)
+                    {
+                        if ((indexedWord.LetterMask & letterMask) == letterMask
+                            && search.SearchIn(indexedWord.IndexedWordStr, SearchFlags.NONE).Found)
+                        {
+                            for (int i = 0; i < indexedWord.MatchesCount; ++i)
+                            {
+                                int wordMatch = WordDictionary.IndexedWordMatches[indexedWordMatchStart + i];
+                                SearchInWordsMask[wordMatch / 32] |= 1 << (wordMatch & 31);
+                            }
+
+                        }
+                        indexedWordMatchStart += indexedWord.MatchesCount;
+                    }
+                }
             }
         }
 
@@ -254,18 +283,18 @@ namespace OtakuLib
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float SearchWord(Word word, SearchScope searchScope)
+        public float SearchWord(Word word, int wordIndex, SearchScope searchScope)
         {
             float relevance = 0;
             if ((searchScope & SearchScope.HANZI) != 0)
             {
                 relevance = Math.Max(relevance, SearchHanzis(word.Hanzi, word.Traditional));
             }
-            if ((searchScope & SearchScope.PINYIN) != 0)
+            if ((searchScope & SearchScope.PINYIN) != 0 && (word.PinyinMask & PinyinMask) == PinyinMask)
             {
                 relevance = Math.Max(relevance, SearchPinyins(word.Pinyins) * 0.9f);
             }
-            if ((searchScope & SearchScope.TRANSLATION) != 0)
+            if ((searchScope & SearchScope.TRANSLATION) != 0 && (SearchInWordsMask[wordIndex / 32] & (1 << (wordIndex & 31))) > 0)
             {
                 relevance = Math.Max(relevance, SearchTranslations(word.Translations));
             }

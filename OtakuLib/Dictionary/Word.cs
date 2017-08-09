@@ -38,11 +38,12 @@ namespace OtakuLib
         public StringList Tags                  { get { return new StringList(TagListOffset, TagListLength); } }
         public MeaningList Meanings             { get { return new MeaningList(PinyinListOffset, TranslationListOffset, MeaningsMemory); } }
 
+        public ulong PinyinMask;
 
         internal Word(
             StringPointerBuilder stringPointerBuilder,
             string hanzi, string traditional, string thumbPinyin, string thumbTranslation, string radicals, string link,
-            MeaningListBuilder meaningBuilder, StringPointerBuilder tagBuilder)
+            MeaningListBuilder meaningBuilder, StringPointerBuilder tagBuilder, ulong pinyinMask)
         {
             WordStart = stringPointerBuilder.StringPointers.Count;
 
@@ -62,6 +63,8 @@ namespace OtakuLib
             TagListLength = (byte)tagBuilder.StringPointers.Count;
             
             MeaningsMemory = new MeaningListMemory(meaningBuilder);
+
+            PinyinMask = pinyinMask;
         }
 
         public int CompareTo(Word other)

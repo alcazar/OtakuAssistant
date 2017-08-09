@@ -32,7 +32,7 @@ namespace OtakuLib
             BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8);
 
             // version
-            writer.Write((int)1);
+            writer.Write((int)3);
             // number of parts
             writer.Write((int)dictionaryWriteJobs.Count);
 
@@ -48,6 +48,25 @@ namespace OtakuLib
                 dictionaryWriteJob.Result.Seek(0, SeekOrigin.Begin);
                 dictionaryWriteJob.Result.CopyTo(stream);
                 dictionaryWriteJob.Result.Dispose();
+            }
+
+            // make sure we're at end
+            writer.Seek(0, SeekOrigin.End);
+
+            writer.Write((int)WordDictionary.IndexedWords.Length);
+            writer.Write((int)WordDictionary.IndexedWordMatches.Length);
+
+            // copy index
+            foreach (IndexedWord indexedWord in WordDictionary.IndexedWords)
+            {
+                writer.Write(indexedWord.IndexedWordStr);
+                writer.Write((ulong)indexedWord.LetterMask);
+                writer.Write((int)indexedWord.MatchesCount);
+            }
+
+            foreach (int wordMatch in WordDictionary.IndexedWordMatches)
+            {
+                writer.Write(wordMatch);
             }
 
             stream.Flush();
@@ -102,6 +121,8 @@ namespace OtakuLib
                     {
                         writer.Write(tag);
                     }
+
+                    writer.Write((ulong)word.PinyinMask);
                 }
 
                 return stream;

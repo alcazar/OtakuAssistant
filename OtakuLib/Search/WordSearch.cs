@@ -92,7 +92,7 @@ namespace OtakuLib
                 }
                 SearchQueue.Enqueue(this);
             }
-                
+
             if (MasterStartNotifier != null)
             {
                 MasterStartNotifier.Set();
@@ -104,6 +104,7 @@ namespace OtakuLib
         private static Queue<WordSearch> SearchQueue = new Queue<WordSearch>();
         
         private static SearchQuery CurrentQuery = null;
+        private static List<SearchItem> InternalSearchResults = new List<SearchItem>();
 
         private static CancellationTokenSource SearchServiceStopTokenSource = null;
         private static ManualResetEventSlim MasterStartNotifier = null;
@@ -114,7 +115,7 @@ namespace OtakuLib
         private static Task MasterJob = null;
         private static SearchWorkJob[] WorkerJobs = null;
 
-        public static void StartSearchService(bool warmup = true)
+        public static void StartSearchService(bool warmup = true, bool multithreaded = true)
         {
             if (MasterJob == null)
             {
@@ -131,7 +132,14 @@ namespace OtakuLib
                 WorkerCompleteNotifier = new SemaphoreSlim(0, WorkerJobs.Length);
                 MasterCompleteNotifier = new SemaphoreSlim(0, WorkerJobs.Length);
 
-                MasterJob = Task.Factory.StartNew(SearchMasterJob, TaskCreationOptions.LongRunning);
+                if (multithreaded)
+                {
+                    MasterJob = Task.Factory.StartNew(SearchMasterJobMultiThread, TaskCreationOptions.LongRunning);
+                }
+                else
+                {
+                    MasterJob = Task.Factory.StartNew(SearchMasterJobSingleThread, TaskCreationOptions.LongRunning);
+                }
 
                 Debug.WriteLine("Started search service");
             }
@@ -185,9 +193,164 @@ namespace OtakuLib
             }
         }
 
-        private static void SearchMasterJob()
+        private static void SearchMasterJobSingleThread()
         {
             Queue<WordSearch> searchQueue = SearchQueue;
+            
+            List<SearchItem> internalSearchResults = InternalSearchResults;
+
+            Stopwatch totalTime = new Stopwatch();
+            Stopwatch dequeue = new Stopwatch();
+            Stopwatch initQuery = new Stopwatch();
+            Stopwatch jobSearch = new Stopwatch();
+            Stopwatch generateResults = new Stopwatch();
+
+            try
+            {
+                while (true)
+                {
+                    int count = 0;
+                    lock (SearchQueueMutex)
+                    {
+                        count = searchQueue.Count;
+                    }
+
+                    if (count == 0)
+                    {
+                        // no job
+                        while (!MasterStartNotifier.Wait(1, SearchServiceStopTokenSource.Token)) ;
+                    }
+                    else
+                    {
+                        // check if we have to quit now
+                        SearchServiceStopTokenSource.Token.ThrowIfCancellationRequested();
+                    }
+                    MasterStartNotifier.Reset();
+
+                    Debug.WriteLine("Search start");
+
+                    totalTime.Restart();
+
+                    dequeue.Restart();
+
+                    WordSearch currentSearch;
+                    lock (SearchQueueMutex)
+                    {
+                        currentSearch = searchQueue.Dequeue();
+                    }
+
+                    dequeue.Stop();
+
+                    initQuery.Restart();
+
+                    CurrentQuery = new SearchQuery(currentSearch.SearchText);
+
+                    initQuery.Stop();
+
+                    if (CurrentQuery.searchScope != SearchScope.NONE)
+                    {
+                        jobSearch.Restart();
+
+                        internalSearchResults.Clear();
+
+                        switch (CurrentQuery.searchScope)
+                        {
+                            case SearchScope.HANZI:
+                                Run(SearchScope.HANZI);
+                                break;
+                            case SearchScope.PINYIN:
+                                Run(SearchScope.PINYIN);
+                                break;
+                            case SearchScope.TRANSLATION:
+                                Run(SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.HANZI | SearchScope.PINYIN:
+                                Run(SearchScope.HANZI | SearchScope.PINYIN);
+                                break;
+                            case SearchScope.HANZI | SearchScope.TRANSLATION:
+                                Run(SearchScope.HANZI | SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.PINYIN | SearchScope.TRANSLATION:
+                                Run(SearchScope.PINYIN | SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION:
+                                Run(SearchScope.HANZI | SearchScope.PINYIN | SearchScope.TRANSLATION);
+                                break;
+                            case SearchScope.NONE:
+                            default:
+                                break;
+                        }
+
+                        jobSearch.Stop();
+
+                        generateResults.Restart();
+
+                        internalSearchResults.Sort();
+
+                        currentSearch.Results = new SearchResult();
+                        int len = Math.Min(internalSearchResults.Count, MaxSearchResultCount);
+                        for (int i = 0; i < len; ++i)
+                        {
+                            currentSearch.Results.Add(new OtakuLib.SearchItem(internalSearchResults[i].Word, internalSearchResults[i].Relevance));
+                        }
+
+                        generateResults.Stop();
+                    }
+
+                    totalTime.Stop();
+
+                    Debug.WriteLine("Search time for {1}: 0.{0:fffffff}s", totalTime.Elapsed, currentSearch.SearchText);
+                    Debug.WriteLine("   Dequeue: 0.{0:fffffff}s", dequeue.Elapsed);
+                    Debug.WriteLine("   InitQuery: 0.{0:fffffff}s", initQuery.Elapsed);
+                    Debug.WriteLine("   Search: 0.{0:fffffff}s", jobSearch.Elapsed);
+                    Debug.WriteLine("   Results: 0.{0:fffffff}s", generateResults.Elapsed);
+
+                    currentSearch.SearchCompleteHandler?.Invoke(currentSearch);
+
+                    CurrentQuery = null;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // return nicely
+                Debug.WriteLine("Stopped master search thread");
+            }
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void Run(SearchScope searchScope)
+        {
+            WordDictionary dictionary = WordDictionary.Words;
+
+            SearchQuery query = CurrentQuery;
+            List<SearchItem> internalSearchResults = InternalSearchResults;
+
+            int end = dictionary.Count;
+
+            for (int i = 0; i < end; ++i)
+            {
+                Word word = dictionary[i];
+
+                float relevance = query.SearchWord(word, i, searchScope);
+                if (relevance > MinRelevance)
+                {
+                    internalSearchResults.Add(new SearchItem(word, relevance));
+                }
+            }
+        }
+
+        private static void SearchMasterJobMultiThread()
+        {
+            Queue<WordSearch> searchQueue = SearchQueue;
+
+            List<SearchItem> internalSearchResults = new List<SearchItem>();
+
+            Stopwatch totalTime = new Stopwatch();
+            Stopwatch dequeue = new Stopwatch();
+            Stopwatch initQuery = new Stopwatch();
+            Stopwatch jobSearch = new Stopwatch();
+            Stopwatch generateResults = new Stopwatch();
 
             int jobSliceSize = (WordDictionary.Words.Count + WorkerJobs.Length - 1)/WorkerJobs.Length;
             int jobSliceStart = 0;
@@ -225,14 +388,9 @@ namespace OtakuLib
 
                     Debug.WriteLine("Search start");
 
-                    Stopwatch totalTime = new Stopwatch();
-                    Stopwatch initQuery = new Stopwatch();
-                    Stopwatch jobSearch = new Stopwatch();
-                    Stopwatch generateResults = new Stopwatch();
+                    totalTime.Restart();
 
-                    totalTime.Start();
-                
-                    initQuery.Start();
+                    dequeue.Restart();
 
                     WordSearch currentSearch;
                     lock (SearchQueueMutex)
@@ -240,13 +398,17 @@ namespace OtakuLib
                         currentSearch = searchQueue.Dequeue();
                     }
 
+                    dequeue.Stop();
+
+                    initQuery.Restart();
+
                     CurrentQuery = new SearchQuery(currentSearch.SearchText);
 
                     initQuery.Stop();
 
                     if (CurrentQuery.searchScope != SearchScope.NONE)
                     {
-                        jobSearch.Start();
+                        jobSearch.Restart();
                         
                         // kick in the jobs
                         WorkerStartNotifier.Release(WorkerJobs.Length);
@@ -262,9 +424,9 @@ namespace OtakuLib
 
                         jobSearch.Stop();
 
-                        generateResults.Start();
+                        generateResults.Restart();
 
-                        List<SearchItem> internalSearchResults = new List<SearchItem>();
+                        internalSearchResults.Clear();
                         foreach (SearchWorkJob workJob in WorkerJobs)
                         {
                             internalSearchResults.AddRange(workJob.Results);
@@ -285,6 +447,7 @@ namespace OtakuLib
                     totalTime.Stop();
             
                     Debug.WriteLine("Search time for {1}: 0.{0:fffffff}s", totalTime.Elapsed, currentSearch.SearchText);
+                    Debug.WriteLine("   Dequeue: 0.{0:fffffff}s", dequeue.Elapsed);
                     Debug.WriteLine("   InitQuery: 0.{0:fffffff}s", initQuery.Elapsed);
                     Debug.WriteLine("   Search: 0.{0:fffffff}s", jobSearch.Elapsed);
                     Debug.WriteLine("   Results: 0.{0:fffffff}s", generateResults.Elapsed);
@@ -389,7 +552,7 @@ namespace OtakuLib
                 {
                     Word word = dictionary[i];
 
-                    float relevance = query.SearchWord(word, searchScope);
+                    float relevance = query.SearchWord(word, i, searchScope);
                     if (relevance > MinRelevance)
                     {
                         Results.Add(new SearchItem(word, relevance));

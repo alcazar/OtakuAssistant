@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace OtakuLib
 {
-    public struct StringPointer : IComparable<StringPointer>, IComparable<string>, IReadOnlyList<char>
+    public struct StringPointer : IEquatable<StringPointer>, IEquatable<string>, IComparable<StringPointer>, IComparable<string>, IReadOnlyList<char>
     {
         public readonly int Start;
         public readonly ushort Length;
@@ -43,6 +43,52 @@ namespace OtakuLib
         public string Substring(int start)
         {
             return Substring(start, Length - start);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return (obj as StringPointer?)?.Equals(this) ?? false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Start | Length | (ActualLength << 16);
+        }
+
+        public static bool operator==(StringPointer a, StringPointer b)
+        {
+            return a.Equals(b);
+        }
+
+        public static bool operator!=(StringPointer a, StringPointer b)
+        {
+            return !a.Equals(b);
+        }
+
+        public bool Equals(string other)
+        {
+            if (Length == other.Length)
+            {
+                return StringSearch.Search(this, other, SearchFlags.IGNORE_CASE | SearchFlags.IGNORE_DIACRITICS).Found && StringSearch.Search(other, this, SearchFlags.IGNORE_CASE | SearchFlags.IGNORE_DIACRITICS).Found;
+                //return string.Compare(WordDictionary.StringMemory, Start, other, 0, Length) == 0;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool Equals(StringPointer other)
+        {
+            if (Length == other.Length)
+            {
+                return StringSearch.Search(this, other, SearchFlags.IGNORE_CASE | SearchFlags.IGNORE_DIACRITICS).Found && StringSearch.Search(other, this, SearchFlags.IGNORE_CASE | SearchFlags.IGNORE_DIACRITICS).Found;
+                //return string.Compare(WordDictionary.StringMemory, Start, WordDictionary.StringMemory, other.Start, Length) == 0;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public int CompareTo(string other)

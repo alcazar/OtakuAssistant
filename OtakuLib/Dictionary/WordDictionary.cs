@@ -6,6 +6,20 @@ using OtakuLib.Memory;
 
 namespace OtakuLib
 {
+    public struct IndexedWord
+    {
+        public StringPointer IndexedWordStr;
+        public ulong LetterMask;
+        public int MatchesCount;
+
+        public IndexedWord(StringPointer indexedWord, ulong letterMask, int matchesCount)
+        {
+            IndexedWordStr = indexedWord;
+            MatchesCount = matchesCount;
+            LetterMask = letterMask;
+        }
+    }
+
     public class WordDictionary : IEnumerable<Word>
     {
         public static string CurrentDictionary;
@@ -25,11 +39,14 @@ namespace OtakuLib
         }
         public static LoadingTask Loading;
         
-        public static string StringMemory { get; private set; }
+        public static string StringMemory { get; set; }
         internal static StringPointer[] StringPointerMemory { get; private set; }
         internal static MeaningMemory[] MeaningMemory { get; private set; }
 
-        private static List<Word> _Words;
+        internal static List<Word> _Words;
+
+        internal static IndexedWord[] IndexedWords;
+        internal static int[] IndexedWordMatches;
 
         static WordDictionary()
         {
@@ -53,7 +70,7 @@ namespace OtakuLib
             {
                 foreach (Word word in _Words)
                 {
-                    if (word.Hanzi.CompareTo(hanzi) == 0 || word.Traditional.CompareTo(hanzi) == 0)
+                    if (word.Hanzi.Equals(hanzi) || word.Traditional.Equals(hanzi))
                     {
                         return word;
                     }

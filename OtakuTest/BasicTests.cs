@@ -43,6 +43,9 @@ namespace OtakuTest
             TestStringSearch("shanghai", "Pudong Airport (Shanghai)", 16, 24, SearchFlags.IGNORE_CASE);
             TestStringSearch("shanghai", "shàng hǎi", 0, 9, SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER);
             TestStringSearch("shàng hǎi", "shanghai", 0, 8, SearchFlags.IGNORE_DIACRITICS | SearchFlags.IGNORE_NON_LETTER);
+
+            TestStringSearch("áo", "ào", 0, 3, SearchFlags.IGNORE_CASE | SearchFlags.IGNORE_DIACRITICS);
+            TestStringSearch("ào", "áo", 0, 3, SearchFlags.IGNORE_CASE | SearchFlags.IGNORE_DIACRITICS);
         }
     }
 }

@@ -29,6 +29,26 @@ namespace OtakuLib
                 End = end;
             }
 
+            public override bool Equals(object obj)
+            {
+                return (obj as Result?)?.Equals(this) ?? false;
+            }
+
+            public override int GetHashCode()
+            {
+                return Start | End;
+            }
+
+            public static bool operator ==(Result a, Result b)
+            {
+                return a.Equals(b);
+            }
+
+            public static bool operator !=(Result a, Result b)
+            {
+                return !a.Equals(b);
+            }
+
             public bool Equals(Result other)
             {
                 return Start == other.Start && End == other.End;
